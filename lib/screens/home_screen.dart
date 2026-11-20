@@ -58,8 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
     if (ok != true) return;
     final mcq = int.tryParse(mcqCount.text) ?? 0, tf = int.tryParse(tfCount.text) ?? 0, n = mcq + tf, o = int.tryParse(options.text) ?? 0;
-    if (title.text.trim().isEmpty || n < 1 || n > 100 || mcq < 0 || tf < 0 || o < 2 || o > 5) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة والخيارات.')));
+    if (title.text.trim().isEmpty || n < 1 || n > 40 || mcq < 0 || tf < 0 || o < 2 || o > 5) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة (حتى 40 في الورقة الواحدة) والخيارات.')));
       return;
     }
     setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(mcq, 'mcq'), ...List<String>.filled(tf, 'tf')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim())));
