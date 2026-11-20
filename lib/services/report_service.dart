@@ -18,6 +18,6 @@ class ReportService {
       String cell(String value) => '"' + value.replaceAll('"', '""') + '"';
       rows.add([cell(r.studentName), cell(r.examTitle), r.total, r.correct, r.incorrect, r.unanswered, r.ambiguous, r.percentage.toStringAsFixed(1)].join(','));
     }
-    return [0xEF, 0xBB, 0xBF, ...utf8.encode(rows.join('\\r\\n'))];
+    return [0xEF, 0xBB, 0xBF, ...utf8.encode(rows.join(String.fromCharCode(13, 10)))];
   }
 }
