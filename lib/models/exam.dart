@@ -1,12 +1,43 @@
 class Exam {
-  Exam({required this.id, required this.title, required this.subject, required this.questionCount, required this.optionCount, required this.answerKey, this.createdAt});
+  Exam({
+    required this.id, required this.title, required this.subject,
+    required this.questionCount, required this.optionCount, required this.answerKey,
+    this.createdAt, List<String>? questionTypes, this.schoolName = '',
+    this.teacherName = '', this.termName = '',
+  }) : questionTypes = questionTypes ?? List<String>.filled(questionCount, 'mcq');
+
   final String id, title, subject;
   final int questionCount, optionCount;
   final List<int?> answerKey;
   final DateTime? createdAt;
+  final List<String> questionTypes;
+  final String schoolName, teacherName, termName;
+
+  int optionsFor(int index) => index < questionTypes.length && questionTypes[index] == 'tf' ? 2 : optionCount;
   bool get hasAnswerKey => answerKey.length == questionCount && answerKey.every((v) => v != null);
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'subject': subject, 'questionCount': questionCount, 'optionCount': optionCount, 'answerKey': answerKey, 'createdAt': (createdAt ?? DateTime.now()).toIso8601String()};
-  factory Exam.fromJson(Map<String, dynamic> json) => Exam(id: json['id'] as String, title: json['title'] as String, subject: (json['subject'] ?? '') as String, questionCount: json['questionCount'] as int, optionCount: json['optionCount'] as int, answerKey: (json['answerKey'] as List).map((v) => v == null ? null : v as int).toList(), createdAt: DateTime.tryParse((json['createdAt'] ?? '') as String));
+
+  Map<String, dynamic> toJson() => {
+    'id': id, 'title': title, 'subject': subject, 'questionCount': questionCount,
+    'optionCount': optionCount, 'answerKey': answerKey,
+    'questionTypes': questionTypes, 'schoolName': schoolName,
+    'teacherName': teacherName, 'termName': termName,
+    'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
+  };
+
+  factory Exam.fromJson(Map<String, dynamic> json) {
+    final count = json['questionCount'] as int;
+    return Exam(
+      id: json['id'] as String, title: json['title'] as String,
+      subject: (json['subject'] ?? '') as String, questionCount: count,
+      optionCount: json['optionCount'] as int,
+      answerKey: (json['answerKey'] as List).map((v) => v == null ? null : v as int).toList(),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '') as String),
+      questionTypes: (json['questionTypes'] as List?)?.map((v) => v.toString()).toList(),
+      schoolName: (json['schoolName'] ?? '') as String,
+      teacherName: (json['teacherName'] ?? '') as String,
+      termName: (json['termName'] ?? '') as String,
+    );
+  }
 }
 class ExamResult {
   ExamResult({required this.id, required this.examId, required this.examTitle, required this.studentName, required this.responses, required this.correct, required this.incorrect, required this.unanswered, required this.ambiguous, required this.scannedAt});
