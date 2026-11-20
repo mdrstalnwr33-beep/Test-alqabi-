@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/exam.dart';
@@ -17,7 +18,7 @@ class OmrSheetService {
     final pitch = rows <= 1 ? 0.0 : (_bottom - _top) / (rows - 1);
     return BubblePosition((baseX + _optionStart + option * _optionGap) / pageWidth, (_top + row * pitch) / pageHeight);
   }
-  static Future<List<int>> buildPdf(Exam exam) async {
+  static Future<Uint8List> buildPdf(Exam exam) async {
     final doc = pw.Document();
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
       pw.Positioned(left: 28, top: 24, child: pw.Text('AL QADI SMART OMR', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
