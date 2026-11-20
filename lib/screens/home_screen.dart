@@ -147,10 +147,10 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
     ));
-    if (ok == true) { await _save(); if (mounted) setState(() {}); }
+    if (ok == true) { await _save(allowIncomplete: true); if (mounted) setState(() {}); }
   }
-  Future<void> _save() async {
-    if (answers.any((v) => v == null)) return;
+  Future<void> _save({bool allowIncomplete = false}) async {
+    if (!allowIncomplete && answers.any((v) => v == null)) return;
     final updated = Exam(id: widget.exam.id, title: widget.exam.title, subject: widget.exam.subject, questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
@@ -158,7 +158,8 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   Future<void> _printSheet() async {
     if (answers.any((v) => v == null)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل مفتاح الإجابة قبل طباعة الورقة.'))); return; }
     await _save();
-    final bytes = await OmrSheetService.buildPdf(widget.exam);
+    final currentExam = Exam(id: widget.exam.id, title: widget.exam.title, subject: widget.exam.subject, questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
+    final bytes = await OmrSheetService.buildPdf(currentExam);
     await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'OMR-${widget.exam.title}.pdf');
   }
   @override
@@ -180,7 +181,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
               child: Row(children: [
                 SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
                 SizedBox(width: 104, child: DropdownButton<String>(isExpanded: true, value: questionTypes[i], items: const [DropdownMenuItem(value: 'mcq', child: Text('اختيار')), DropdownMenuItem(value: 'tf', child: Text('صح/خطأ'))], onChanged: (v) => setState(() { questionTypes[i] = v!; if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) answers[i] = null; }))),
-                ...List.generate(widget.exam.optionsFor(i), (j) => Expanded(
+                ...List.generate(questionTypes[i] == 'tf' ? 2 : widget.exam.optionCount, (j) => Expanded(
                   child: RadioListTile<int>(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
