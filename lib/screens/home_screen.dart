@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> newExam() async {
     final title = TextEditingController(), subject = TextEditingController();
     final school = TextEditingController(), teacher = TextEditingController(), term = TextEditingController();
-    final count = TextEditingController(text: '20'), options = TextEditingController(text: '4');
+    final mcqCount = TextEditingController(text: '20'), tfCount = TextEditingController(text: '0'), options = TextEditingController(text: '4');
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('إنشاء اختبار جديد'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -49,18 +49,20 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 10), TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         const SizedBox(height: 10), TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
         const SizedBox(height: 10), TextField(controller: term, decoration: const InputDecoration(labelText: 'الفصل الدراسي / العام')),
-        const SizedBox(height: 10), TextField(controller: count, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد الأسئلة (1–100)')),
+        const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الاختيار من متعدد')),
+        const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الصح والخطأ')),
+        const SizedBox(height: 6), const Text('يمكن الجمع بين النوعين في الاختبار نفسه.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 10), TextField(controller: options, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد الخيارات (2–5)')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إنشاء'))],
     ));
     if (ok != true) return;
-    final n = int.tryParse(count.text) ?? 0, o = int.tryParse(options.text) ?? 0;
-    if (title.text.trim().isEmpty || n < 1 || n > 100 || o < 2 || o > 5) {
+    final mcq = int.tryParse(mcqCount.text) ?? 0, tf = int.tryParse(tfCount.text) ?? 0, n = mcq + tf, o = int.tryParse(options.text) ?? 0;
+    if (title.text.trim().isEmpty || n < 1 || n > 100 || mcq < 0 || tf < 0 || o < 2 || o > 5) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة والخيارات.')));
       return;
     }
-    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim())));
+    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(mcq, 'mcq'), ...List<String>.filled(tf, 'tf')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim())));
     await _persist();
   }
   void addResult(ExamResult result) async {
@@ -167,7 +169,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     appBar: AppBar(title: Text(widget.exam.title), actions: [IconButton(tooltip: 'تعديل الترويسة', onPressed: _editHeader, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Text(widget.exam.subject + ' • ' + widget.exam.questionCount.toString() + ' سؤال • ' + widget.exam.optionCount.toString() + ' خيارات'),
+        Text(widget.exam.subject + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
         const SizedBox(height: 6), const Text('اختر نوع كل سؤال (اختيار من متعدد أو صح/خطأ)، ثم حدد الإجابة الصحيحة واطبع الورقة.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.picture_as_pdf), label: const Text('معاينة وطباعة ورقة الإجابة')),
       ])),
