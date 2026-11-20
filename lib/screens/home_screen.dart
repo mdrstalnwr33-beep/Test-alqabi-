@@ -161,7 +161,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   Future<void> _printSheet() async {
     if (answers.any((v) => v == null)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل مفتاح الإجابة قبل طباعة الورقة.'))); return; }
     await _save();
-    final currentExam = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
+    final currentExam = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim());
     final bytes = await OmrSheetService.buildPdf(currentExam);
     await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'OMR-${title.text.trim()}.pdf');
   }
