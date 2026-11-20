@@ -18,7 +18,7 @@ class OmrScannerService {
     final answers = <int?>[], ambiguous = <int>[], blanks = <int>[];
     for (var q = 0; q < exam.questionCount; q++) {
       final scores = <double>[];
-      for (var option = 0; option < exam.optionCount; option++) {
+      for (var option = 0; option < exam.optionsFor(q); option++) {
         final p = OmrSheetService.positionFor(exam, q, option);
         scores.add(_darkRatio(warped, (p.x * outputWidth).round(), (p.y * outputHeight).round()));
       }
