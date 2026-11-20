@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:image/image.dart' as imglib;
 import '../models/exam.dart';
 import 'omr_sheet_service.dart';
@@ -11,7 +12,7 @@ class OmrScannerService {
   static const outputWidth = 1190, outputHeight = 1684;
   Future<OmrReadout> scan({required List<int> imageBytes, required List<ScanPoint> corners, required Exam exam}) async {
     if (corners.length != 4) throw ArgumentError('حدد زوايا الورقة الأربع.');
-    final source = imglib.decodeImage(imageBytes);
+    final source = imglib.decodeImage(Uint8List.fromList(imageBytes));
     if (source == null) throw StateError('تعذر قراءة الصورة.');
     final warped = _warp(source, corners);
     final answers = <int?>[], ambiguous = <int>[], blanks = <int>[];
