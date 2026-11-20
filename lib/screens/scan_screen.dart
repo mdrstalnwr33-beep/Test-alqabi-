@@ -192,8 +192,8 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
                 SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
                   child: Wrap(spacing: 2, children: [
-                    ...List.generate(widget.exam.optionCount, (j) => ChoiceChip(
-                      label: Text(String.fromCharCode(65 + j)),
+                    ...List.generate(widget.exam.optionsFor(i), (j) => ChoiceChip(
+                      label: Text(widget.exam.questionTypes[i] == 'tf' ? (j == 0 ? 'صح' : 'خطأ') : String.fromCharCode(65 + j)),
                       selected: answers[i] == j,
                       onSelected: (_) => setState(() => answers[i] = j),
                     )),
