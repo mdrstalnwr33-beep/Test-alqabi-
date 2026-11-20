@@ -114,7 +114,7 @@ class OmrSheetService {
         final isTf = exam.questionTypes[q] == 'tf';
         final title = isTf ? 'حل فقرات الصح والخطأ' : 'حل فقرات الاختيار من متعدد';
         widgets.add(pw.Positioned(
-          left: x + 30, top: y - 40,
+          left: x + 30, top: y - (row == 0 ? 32 : 40),
           child: pw.SizedBox(width: 205, child: pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: pw.BoxDecoration(
