@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/exam.dart';
 class ReportService {
-  Future<List<int>> resultsPdf(List<ExamResult> results, String title) async {
+  Future<Uint8List> resultsPdf(List<ExamResult> results, String title) async {
     final doc = pw.Document();
     doc.addPage(pw.MultiPage(pageFormat: PdfPageFormat.a4, build: (_) => [
       pw.Text('AL QADI SMART - RESULTS', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
