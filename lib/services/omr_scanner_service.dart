@@ -32,8 +32,8 @@ class OmrScannerService {
   }
   imglib.Image _warp(imglib.Image source, List<ScanPoint> corners) {
     final dst = <ScanPoint>[
-      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 152 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 152 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 197 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 197 / OmrSheetService.pageHeight * outputHeight),
       ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
       ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
     ];
