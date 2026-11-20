@@ -151,11 +151,43 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         const SizedBox(height: 6), const Text('حدد الإجابة الصحيحة لكل سؤال، ثم احفظ المفتاح واطبع ورقة OMR.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.picture_as_pdf), label: const Text('معاينة وطباعة ورقة الإجابة')),
       ])),
-      Expanded(child: ListView.builder(itemCount: answers.length, itemBuilder: (context, i) => Card(margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), child: Row(children: [
-        SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        ...List.generate(widget.exam.optionCount, (j) => Expanded(child: RadioListTile<int>(contentPadding: EdgeInsets.zero, dense: true, visualDensity: VisualDensity.compact, title: Text(String.fromCharCode(65 + j)), value: j, groupValue: answers[i], onChanged: (v) => setState(() => answers[i] = v)))),
-      ])))),
-      SafeArea(child: Padding(padding: const EdgeInsets.all(12), child: SizedBox(width: double.infinity, child: FilledButton(onPressed: answers.every((v) => v != null) ? _save : null, child: const Text('حفظ مفتاح الإجابة'))))),
+      Expanded(
+        child: ListView.builder(
+          itemCount: answers.length,
+          itemBuilder: (context, i) => Card(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Row(children: [
+                SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                ...List.generate(widget.exam.optionCount, (j) => Expanded(
+                  child: RadioListTile<int>(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    title: Text(String.fromCharCode(65 + j)),
+                    value: j,
+                    groupValue: answers[i],
+                    onChanged: (v) => setState(() => answers[i] = v),
+                  ),
+                )),
+              ]),
+            ),
+          ),
+        ),
+      ),
+      SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: answers.every((v) => v != null) ? _save : null,
+              child: const Text('حفظ مفتاح الإجابة'),
+            ),
+          ),
+        ),
+      ),
     ]),
   );
 }
