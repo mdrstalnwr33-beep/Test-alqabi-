@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   Future<void> newExam() async {
     final title = TextEditingController(), subject = TextEditingController();
-    final school = TextEditingController(), teacher = TextEditingController(), term = TextEditingController();
+    final school = TextEditingController(), teacher = TextEditingController();
     final mcqCount = TextEditingController(text: '20'), tfCount = TextEditingController(text: '0'), options = TextEditingController(text: '4');
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('إنشاء اختبار جديد'),
@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 10), TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
         const SizedBox(height: 10), TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         const SizedBox(height: 10), TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
-        const SizedBox(height: 10), TextField(controller: term, decoration: const InputDecoration(labelText: 'الفصل الدراسي / العام')),
         const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الاختيار من متعدد')),
         const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الصح والخطأ')),
         const SizedBox(height: 6), const Text('يمكن الجمع بين النوعين في الاختبار نفسه.', style: TextStyle(color: Colors.black54)),
@@ -62,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة (حتى 40 في الورقة الواحدة) والخيارات.')));
       return;
     }
-    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(mcq, 'mcq'), ...List<String>.filled(tf, 'tf')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim())));
+    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(mcq, 'mcq'), ...List<String>.filled(tf, 'tf')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
     await _persist();
   }
   void addResult(ExamResult result) async {
@@ -135,17 +134,19 @@ class _ExamDetailScreen extends StatefulWidget {
 class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   late List<int?> answers;
   late List<String> questionTypes;
-  final school = TextEditingController(), teacher = TextEditingController(), term = TextEditingController();
+  final title = TextEditingController(), subject = TextEditingController();
+  final school = TextEditingController(), teacher = TextEditingController();
   @override
-  void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; term.text = widget.exam.termName; }
+  void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); title.text = widget.exam.title; subject.text = widget.exam.subject; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
 
-  Future<void> _editHeader() async {
+  Future<void> _editExamDetails() async {
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-      title: const Text('تعديل ترويسة ورقة الإجابة'),
+      title: const Text('تعديل بيانات الاختبار'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم الاختبار')),
+        TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
         TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
-        TextField(controller: term, decoration: const InputDecoration(labelText: 'الفصل الدراسي / العام')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
     ));
@@ -153,7 +154,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
-    final updated = Exam(id: widget.exam.id, title: widget.exam.title, subject: widget.exam.subject, questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
+    final updated = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
@@ -166,10 +167,10 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.exam.title), actions: [IconButton(tooltip: 'تعديل الترويسة', onPressed: _editHeader, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
+    appBar: AppBar(title: Text(widget.exam.title), actions: [IconButton(tooltip: 'تعديل الترويسة', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Text(widget.exam.subject + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
+        Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
         const SizedBox(height: 6), const Text('اختر نوع كل سؤال (اختيار من متعدد أو صح/خطأ)، ثم حدد الإجابة الصحيحة واطبع الورقة.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.picture_as_pdf), label: const Text('معاينة وطباعة ورقة الإجابة')),
       ])),
