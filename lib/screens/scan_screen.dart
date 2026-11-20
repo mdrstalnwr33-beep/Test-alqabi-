@@ -34,7 +34,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> choose(ImageSource source) async {
     try {
       final picked = await picker.pickImage(source: source, imageQuality: 95, maxWidth: 2400);
-      if (picked != null && mounted) setState(() { image = picked; corners = []; stageMessage = 'حدد زوايا الورقة بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار.'; });
+      if (picked != null && mounted) setState(() { image = picked; corners = []; stageMessage = 'حدد مراكز المربعات السوداء الأربعة بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار.'; });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر فتح الصورة: ' + e.toString())));
     }
@@ -86,7 +86,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     const Text('تصحيح ورقة OMR', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
     const SizedBox(height: 8),
-    const Text('اطبع نموذج الإجابة من الاختبار نفسه. أثناء التصوير التقط الورقة كاملة من أعلى، ثم المس زوايا الورقة الأربع لتصحيح الميل والمنظور.', style: TextStyle(color: Colors.black54, height: 1.5)),
+    const Text('اطبع نموذج الإجابة من الاختبار نفسه. أثناء التصوير التقط الورقة كاملة من أعلى، ثم المس مراكز المربعات السوداء الأربعة لتصحيح الميل والمنظور.', style: TextStyle(color: Colors.black54, height: 1.5)),
     const SizedBox(height: 16),
     DropdownButtonFormField<Exam>(
       value: selectedExam != null && widget.exams.any((e) => e.id == selectedExam!.id) ? widget.exams.firstWhere((e) => e.id == selectedExam!.id) : null,
