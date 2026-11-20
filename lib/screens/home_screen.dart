@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
+import 'package:printing/printing.dart';\nimport 'dart:io';\nimport 'package:path_provider/path_provider.dart';\nimport 'package:share_plus/share_plus.dart';
 import '../models/exam.dart';
 import '../services/app_store.dart';
 import '../services/omr_sheet_service.dart';
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _resultsPage() {
     if (results.isEmpty) return const Center(child: Text('لا توجد نتائج بعد. صحّح أول ورقة لتظهر النتائج هنا.'));
     return ListView(padding: const EdgeInsets.all(16), children: [
-      Row(children: [const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))), IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.csv'); }, icon: const Icon(Icons.table_view))]),
+      Row(children: [const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))), IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); final dir = await getTemporaryDirectory(); final file = File('${dir.path}/alqadi-results.csv'); await file.writeAsBytes(bytes, flush: true); await Share.shareXFiles([XFile(file.path)], text: 'نتائج اختبارات القاضي الذكي'); }, icon: const Icon(Icons.table_view))]),
       ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text(r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16)), trailing: Text(r.incorrect.toString() + ' خطأ')))),
     ]);
   }
