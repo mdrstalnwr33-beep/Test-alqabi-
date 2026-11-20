@@ -114,6 +114,26 @@ class OmrSheetService {
     for (var q = 0; q < exam.questionCount; q++) {
       final right = q >= rows, row = right ? q - rows : q;
       final x = right ? _rightX : _leftX, y = _top + row * pitch;
+      // Print a clear section heading immediately above the first question
+      // of each type in each column (MCQ and true/false are kept distinct).
+      final isSectionStart = row == 0 ||
+          exam.questionTypes[q] != exam.questionTypes[q - 1];
+      if (isSectionStart) {
+        final isTf = exam.questionTypes[q] == 'tf';
+        final title = isTf ? 'حل فقرات الصح والخطأ' : 'حل فقرات الاختيار من متعدد';
+        widgets.add(pw.Positioned(
+          left: x + 30, top: y - 24, width: 205,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey200,
+              border: pw.Border.all(color: PdfColors.grey500, width: 0.5),
+              borderRadius: pw.BorderRadius.circular(3),
+            ),
+            child: pw.Center(child: _rtl(title, font, 8)),
+          ),
+        ));
+      }
       final number = (q + 1).toString().padLeft(2, '0');
       widgets.add(pw.Positioned(left: x, top: y - 7,
         child: pw.SizedBox(width: 31, child: pw.Text(number, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)))));
