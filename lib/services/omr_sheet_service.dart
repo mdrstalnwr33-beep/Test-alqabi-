@@ -37,26 +37,60 @@ class OmrSheetService {
       throw StateError('تعذر تحميل خط اللغة العربية المضمن: $error');
     }
     final bold = arabic;
+    // The existing exam header is placed on the right side of the sheet.
     final header = pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey500, width: 0.8)),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey500, width: 0.8),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
       child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-        _rtl('المدرسة: ${exam.schoolName.isEmpty ? '________________________' : exam.schoolName}', arabic, 13),
+        _rtl('المدرسة: ${exam.schoolName.isEmpty ? '____________________' : exam.schoolName}', arabic, 12),
         pw.SizedBox(height: 5),
-        _rtl('اسم الاختبار: ${exam.title}', arabic, 13),
+        _rtl('اسم الاختبار: ${exam.title}', arabic, 12),
         pw.SizedBox(height: 5),
-        _rtl('المادة: ${exam.subject}     الفصل الدراسي: ${exam.termName.isEmpty ? '__________' : exam.termName}', arabic, 11),
-        pw.SizedBox(height: 5),
-        _rtl('المعلم: ${exam.teacherName.isEmpty ? '________________' : exam.teacherName}', arabic, 11),
-        pw.SizedBox(height: 5),
-        _rtl('اسم الطالب: __________________________     رقم الجلوس: __________', arabic, 11),
-        pw.SizedBox(height: 5),
-        _rtl('ظلّل دائرة واحدة لكل سؤال بقلم داكن.', arabic, 9),
+        _rtl('المادة: ${exam.subject}', arabic, 10),
+        pw.SizedBox(height: 4),
+        _rtl('الفصل الدراسي: ${exam.termName.isEmpty ? '__________' : exam.termName}', arabic, 10),
+        pw.SizedBox(height: 4),
+        _rtl('المعلم: ${exam.teacherName.isEmpty ? '______________' : exam.teacherName}', arabic, 10),
+        pw.SizedBox(height: 4),
+        _rtl('اسم الطالب: ____________________', arabic, 10),
+        pw.SizedBox(height: 4),
+        _rtl('رقم الجلوس: __________', arabic, 10),
+      ]),
+    );
+    // Student instructions are printed in a matching panel on the left.
+    final instructions = pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey500, width: 0.8),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        pw.Center(child: _rtl('تعليمات مهمة للطلاب', bold, 12)),
+        pw.Divider(color: PdfColors.grey500, thickness: 0.6),
+        _rtl('١- ظلّل دائرة واحدة فقط لكل سؤال.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٢- املأ الدائرة بالكامل بقلم رصاص HB أو قلم داكن.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٣- لا تستخدم علامة صح أو تضع دائرة حول الحرف.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٤- امسح الإجابة الخاطئة جيداً قبل اختيار غيرها.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٥- يمنع استخدام الهاتف المحمول أو أي وسيلة اتصال.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٦- يسمح باستخدام الآلة الحاسبة إذا أذن المعلم.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٧- اكتب اسمك ورقم جلوسك بوضوح.', arabic, 9),
+        pw.SizedBox(height: 3),
+        _rtl('٨- لا تثنِ الورقة ولا تضع عليها علامات إضافية.', arabic, 9),
       ]),
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
       pw.Positioned(left: 28, right: 28, top: 18, child: pw.Center(child: _rtl('القاضي الذكي لتصحيح الاختبارات', arabic, 17))),
-      pw.Positioned(left: 28, right: 28, top: 48, child: header),
+      pw.Positioned(left: 28, top: 48, width: 264, child: instructions),
+      pw.Positioned(left: 303, top: 48, width: 264, child: header),
       _marker(22, 190), _marker(550, 190), _marker(22, 808), _marker(550, 808),
       ..._questionWidgets(exam, arabic),
       pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
