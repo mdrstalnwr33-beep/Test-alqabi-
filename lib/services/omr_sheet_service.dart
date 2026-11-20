@@ -29,7 +29,7 @@ class OmrSheetService {
 
   static Future<Uint8List> buildPdf(Exam exam) async {
     final doc = pw.Document();
-    pw.Font? arabic;
+    late final pw.Font arabic;
     try {
       arabic = pw.Font.ttf(await rootBundle.load('packages/google_fonts/fonts/NotoSansArabic-Regular.ttf'));
     } catch (_) {
