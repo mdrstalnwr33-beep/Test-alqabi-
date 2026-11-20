@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:arabic_reshaper/arabic_reshaper.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/exam.dart';
@@ -11,9 +12,9 @@ class BubblePosition {
 
 class OmrSheetService {
   static const pageWidth = 595.0, pageHeight = 842.0;
-  static const _top = 225.0, _bottom = 790.0;
+  static const _top = 250.0, _bottom = 790.0;
   static const _leftX = 34.0, _rightX = 305.0;
-  static const _radius = 7.0;
+  static const _radius = 8.5;
 
   static BubblePosition positionFor(Exam exam, int question, int option) {
     final rows = (exam.questionCount + 1) ~/ 2;
@@ -31,23 +32,32 @@ class OmrSheetService {
     final doc = pw.Document();
     late final pw.Font arabic;
     try {
-      arabic = pw.Font.ttf(await rootBundle.load('packages/google_fonts/fonts/NotoSansArabic-Regular.ttf'));
-    } catch (_) {
-      arabic = pw.Font.helvetica();
+      arabic = pw.Font.ttf(await rootBundle.load('assets/fonts/Amiri-Regular.ttf'));
+    } catch (error) {
+      throw StateError('تعذر تحميل خط اللغة العربية المضمن: $error');
     }
     final bold = arabic;
-    final header = <pw.Widget>[
-      _rtl(exam.schoolName.isEmpty ? 'اسم المدرسة: __________________________' : 'المدرسة: ${exam.schoolName}', arabic, 12),
-      _rtl('اختبار: ${exam.title}', arabic, 12),
-      _rtl('المادة: ${exam.subject}    الفصل الدراسي: ${exam.termName.isEmpty ? '____________' : exam.termName}', arabic, 10),
-      _rtl('المعلم: ${exam.teacherName.isEmpty ? '________________' : exam.teacherName}', arabic, 10),
-      _rtl('اسم الطالب: __________________________________    رقم الطالب: ______________', arabic, 10),
-      _rtl('ظلّل دائرة واحدة لكل سؤال بقلم داكن، وحافظ على استواء الورقة عند التصوير.', arabic, 8),
-    ];
+    final header = pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey500, width: 0.8)),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        _rtl('المدرسة: ${exam.schoolName.isEmpty ? '________________________' : exam.schoolName}', arabic, 13),
+        pw.SizedBox(height: 5),
+        _rtl('اسم الاختبار: ${exam.title}', arabic, 13),
+        pw.SizedBox(height: 5),
+        _rtl('المادة: ${exam.subject}     الفصل الدراسي: ${exam.termName.isEmpty ? '__________' : exam.termName}', arabic, 11),
+        pw.SizedBox(height: 5),
+        _rtl('المعلم: ${exam.teacherName.isEmpty ? '________________' : exam.teacherName}', arabic, 11),
+        pw.SizedBox(height: 5),
+        _rtl('اسم الطالب: __________________________     رقم الجلوس: __________', arabic, 11),
+        pw.SizedBox(height: 5),
+        _rtl('ظلّل دائرة واحدة لكل سؤال بقلم داكن.', arabic, 9),
+      ]),
+    );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
-      pw.Positioned(left: 28, top: 20, child: pw.Text('القاضي الذكي لتصحيح الاختبارات', style: pw.TextStyle(font: bold, fontSize: 17, fontWeight: pw.FontWeight.bold))),
-      pw.Positioned(left: 28, right: 28, top: 52, child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: header)),
-      _marker(22, 145), _marker(550, 145), _marker(22, 808), _marker(550, 808),
+      pw.Positioned(left: 28, right: 28, top: 18, child: pw.Center(child: _rtl('القاضي الذكي لتصحيح الاختبارات', arabic, 17))),
+      pw.Positioned(left: 28, right: 28, top: 48, child: header),
+      _marker(22, 190), _marker(550, 190), _marker(22, 808), _marker(550, 808),
       ..._questionWidgets(exam, arabic),
       pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
     ])));
@@ -56,7 +66,8 @@ class OmrSheetService {
 
   static pw.Widget _rtl(String text, pw.Font font, double size) => pw.Directionality(
     textDirection: pw.TextDirection.rtl,
-    child: pw.Text(text, textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: size)),
+    child: pw.Text(ArabicReshaper.instance.reshape(text), textAlign: pw.TextAlign.right,
+      style: pw.TextStyle(font: font, fontSize: size)),
   );
 
   static pw.Widget _marker(double x, double y) => pw.Positioned(left: x, top: y,
@@ -84,7 +95,7 @@ class OmrSheetService {
             ? (option == 0 ? 'ص' : 'خ')
             : String.fromCharCode(65 + option);
         widgets.add(pw.Positioned(left: cx - 4, top: y + 8,
-          child: pw.Text(label, style: pw.TextStyle(font: font, fontSize: 8, fontWeight: pw.FontWeight.bold))));
+          child: pw.Text(ArabicReshaper.instance.reshape(label), style: pw.TextStyle(font: font, fontSize: 9, fontWeight: pw.FontWeight.bold))));
       }
     }
     return widgets;
