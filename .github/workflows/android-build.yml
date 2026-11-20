@@ -30,11 +30,17 @@ jobs:
           from pathlib import Path
           p = Path("android/settings.gradle.kts")
           s = p.read_text()
-          s = s.replace(
-              "repositories {",
-              "repositories {\\n        google()\\n        mavenCentral()",
-              1,
-          )
+          start = s.find("pluginManagement {")
+          end = s.find("plugins {", start)
+          block = s[start:end if end >= 0 else len(s)]
+          additions = []
+          if "google()" not in block:
+              additions.append("        google()")
+          if "mavenCentral()" not in block:
+              additions.append("        mavenCentral()")
+          if additions:
+              insertion = "repositories {" + chr(10) + chr(10).join(additions)
+              s = s.replace("repositories {", insertion, 1)
           p.write_text(s)
           print(p.read_text())
           PY
