@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as imglib;
 import '../models/exam.dart';
 import '../services/omr_scanner_service.dart';
-import '../services/omr_sheet_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key, required this.exams, required this.onResult});
@@ -182,14 +181,42 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
     appBar: AppBar(title: const Text('مراجعة الإجابات')),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
-      Expanded(child: ListView.builder(itemCount: answers.length, itemBuilder: (context, i) => Card(margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: [
-        SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-        Expanded(child: Wrap(spacing: 2, children: [
-          ...List.generate(widget.exam.optionCount, (j) => ChoiceChip(label: Text(String.fromCharCode(65 + j)), selected: answers[i] == j, onSelected: (_) => setState(() => answers[i] = j))),
-          ChoiceChip(label: const Text('فارغ'), selected: answers[i] == null, onSelected: (_) => setState(() => answers[i] = null)),
-        ])),
-      ])))),
-      SafeArea(child: Padding(padding: const EdgeInsets.all(12), child: SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context, answers), child: const Text('اعتماد التصحيح وحفظ النتيجة'))))),
+      Expanded(
+        child: ListView.builder(
+          itemCount: answers.length,
+          itemBuilder: (context, i) => Card(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              child: Row(children: [
+                SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                  child: Wrap(spacing: 2, children: [
+                    ...List.generate(widget.exam.optionCount, (j) => ChoiceChip(
+                      label: Text(String.fromCharCode(65 + j)),
+                      selected: answers[i] == j,
+                      onSelected: (_) => setState(() => answers[i] = j),
+                    )),
+                    ChoiceChip(label: const Text('فارغ'), selected: answers[i] == null, onSelected: (_) => setState(() => answers[i] = null)),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+      SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context, answers),
+              child: const Text('اعتماد التصحيح وحفظ النتيجة'),
+            ),
+          ),
+        ),
+      ),
     ]),
   );
 }
