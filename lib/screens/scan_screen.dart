@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as imglib;
 import 'package:printing/printing.dart';
 import '../models/exam.dart';
 import '../services/omr_scanner_service.dart';
@@ -25,7 +26,7 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void didUpdateWidget(covariant ScanScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (selectedExam != null && !widget.exams.any((e) => e.id == selectedExam!.id)) selectedExam = null;
+    if (selectedExam != null) {\n      final matches = widget.exams.where((e) => e.id == selectedExam!.id);\n      selectedExam = matches.isEmpty ? null : matches.first;\n    }
   }
 
   Future<void> choose(ImageSource source) async {
@@ -113,7 +114,7 @@ class _ScanScreenState extends State<ScanScreen> {
       future: _loadPreview(file),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final img = snapshot.data!.image;
+        final img = snapshot.data!;
         final scale = _fitScale(img.width.toDouble(), img.height.toDouble(), constraints.maxWidth, constraints.maxHeight);
         final drawnW = img.width * scale, drawnH = img.height * scale;
         final offsetX = (constraints.maxWidth - drawnW) / 2, offsetY = (constraints.maxHeight - drawnH) / 2;
@@ -134,7 +135,7 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }));
 
-  Future<Image> _loadPreview(File file) async => Image.file(file);
+  Future<imglib.Image> _loadPreview(File file) async {\n    final decoded = imglib.decodeImage(await file.readAsBytes());\n    if (decoded == null) throw StateError('تعذر قراءة الصورة.');\n    return decoded;\n  }
   double _fitScale(double iw, double ih, double w, double h) => (w / iw < h / ih) ? w / iw : h / ih;
 }
 
