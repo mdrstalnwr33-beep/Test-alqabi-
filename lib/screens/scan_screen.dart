@@ -115,6 +115,7 @@ class _ScanScreenState extends State<ScanScreen> {
     return FutureBuilder<imglib.Image>(
       future: _loadPreview(file),
       builder: (context, snapshot) {
+        if (snapshot.hasError) return const Center(child: Text('تعذر عرض الصورة المختارة.'));
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final img = snapshot.data!;
         final scale = _fitScale(img.width.toDouble(), img.height.toDouble(), constraints.maxWidth, constraints.maxHeight);
