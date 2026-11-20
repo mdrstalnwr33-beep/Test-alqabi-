@@ -51,8 +51,6 @@ class OmrSheetService {
         pw.SizedBox(height: 5),
         _rtl('المادة: ${exam.subject}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('الفصل الدراسي: ${exam.termName.isEmpty ? '__________' : exam.termName}', arabic, 10),
-        pw.SizedBox(height: 4),
         _rtl('المعلم: ${exam.teacherName.isEmpty ? '______________' : exam.teacherName}', arabic, 10),
         pw.SizedBox(height: 4),
         _rtl('اسم الطالب: ____________________', arabic, 10),
@@ -72,19 +70,13 @@ class OmrSheetService {
         pw.Divider(color: PdfColors.grey500, thickness: 0.6),
         _rtl('١- ظلّل دائرة واحدة فقط لكل سؤال.', arabic, 9),
         pw.SizedBox(height: 3),
-        _rtl('٢- املأ الدائرة بالكامل بقلم رصاص HB أو قلم داكن.', arabic, 9),
-        pw.SizedBox(height: 3),
+        _rtl('٢- استخدم قلماً أسود جافاً واملأ الدائرة بالكامل.', arabic, 9),
+        pw.SizedBox(height: 4),
         _rtl('٣- لا تستخدم علامة صح أو تضع دائرة حول الحرف.', arabic, 9),
-        pw.SizedBox(height: 3),
-        _rtl('٤- امسح الإجابة الخاطئة جيداً قبل اختيار غيرها.', arabic, 9),
-        pw.SizedBox(height: 3),
-        _rtl('٥- يمنع استخدام الهاتف المحمول أو أي وسيلة اتصال.', arabic, 9),
-        pw.SizedBox(height: 3),
-        _rtl('٦- يسمح باستخدام الآلة الحاسبة إذا أذن المعلم.', arabic, 9),
-        pw.SizedBox(height: 3),
-        _rtl('٧- اكتب اسمك ورقم جلوسك بوضوح.', arabic, 9),
-        pw.SizedBox(height: 3),
-        _rtl('٨- لا تثنِ الورقة ولا تضع عليها علامات إضافية.', arabic, 9),
+        pw.SizedBox(height: 4),
+        _rtl('٤- تأكد من اختيار الإجابة الصحيحة قبل التظليل.', arabic, 9),
+        pw.SizedBox(height: 4),
+        _rtl('٥- حافظ على الورقة نظيفة ومسطحة لتسهيل التصحيح.', arabic, 9),
       ]),
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
@@ -122,12 +114,12 @@ class OmrSheetService {
         final isTf = exam.questionTypes[q] == 'tf';
         final title = isTf ? 'حل فقرات الصح والخطأ' : 'حل فقرات الاختيار من متعدد';
         widgets.add(pw.Positioned(
-          left: x + 30, top: y - 24,
+          left: x + 30, top: y - 40,
           child: pw.SizedBox(width: 205, child: pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: pw.BoxDecoration(
-              color: PdfColors.grey200,
-              border: pw.Border.all(color: PdfColors.grey500, width: 0.5),
+              color: isTf ? PdfColor.fromInt(0xFFE5F4EF) : PdfColor.fromInt(0xFFE8EFFB),
+              border: pw.Border.all(color: isTf ? PdfColor.fromInt(0xFF4C9B83) : PdfColor.fromInt(0xFF5879B8), width: 0.7),
               borderRadius: pw.BorderRadius.circular(3),
             ),
             child: pw.Center(child: _rtl(title, font, 8)),
