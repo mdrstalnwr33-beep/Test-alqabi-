@@ -32,10 +32,10 @@ class OmrScannerService {
   }
   imglib.Image _warp(imglib.Image source, List<ScanPoint> corners) {
     final dst = <ScanPoint>[
-      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 145 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(550 / OmrSheetService.pageWidth * outputWidth, 145 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(550 / OmrSheetService.pageWidth * outputWidth, 808 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 808 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 152 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 152 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
     ];
     final h = _homography(dst, corners);
     final out = imglib.Image(width: outputWidth, height: outputHeight, numChannels: 3);
