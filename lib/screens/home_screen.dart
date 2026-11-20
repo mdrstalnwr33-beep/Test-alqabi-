@@ -154,20 +154,20 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
-    final updated = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
+    final updated = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim());
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
   Future<void> _printSheet() async {
     if (answers.any((v) => v == null)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل مفتاح الإجابة قبل طباعة الورقة.'))); return; }
     await _save();
-    final currentExam = Exam(id: widget.exam.id, title: widget.exam.title, subject: widget.exam.subject, questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
+    final currentExam = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim(), termName: term.text.trim());
     final bytes = await OmrSheetService.buildPdf(currentExam);
-    await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'OMR-${widget.exam.title}.pdf');
+    await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'OMR-${title.text.trim()}.pdf');
   }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.exam.title), actions: [IconButton(tooltip: 'تعديل الترويسة', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
+    appBar: AppBar(title: Text(title.text), actions: [IconButton(tooltip: 'تعديل بيانات الاختبار', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
