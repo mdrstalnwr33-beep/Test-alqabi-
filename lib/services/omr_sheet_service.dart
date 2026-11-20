@@ -89,8 +89,8 @@ class OmrSheetService {
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
       pw.Positioned(left: 28, right: 28, top: 18, child: pw.Center(child: _rtl('القاضي الذكي لتصحيح الاختبارات', arabic, 17))),
-      pw.Positioned(left: 28, top: 48, width: 264, child: instructions),
-      pw.Positioned(left: 303, top: 48, width: 264, child: header),
+      pw.Positioned(left: 28, top: 48, child: pw.SizedBox(width: 264, child: instructions)),
+      pw.Positioned(left: 303, top: 48, child: pw.SizedBox(width: 264, child: header)),
       _marker(22, 190), _marker(550, 190), _marker(22, 808), _marker(550, 808),
       ..._questionWidgets(exam, arabic),
       pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
@@ -122,8 +122,8 @@ class OmrSheetService {
         final isTf = exam.questionTypes[q] == 'tf';
         final title = isTf ? 'حل فقرات الصح والخطأ' : 'حل فقرات الاختيار من متعدد';
         widgets.add(pw.Positioned(
-          left: x + 30, top: y - 24, width: 205,
-          child: pw.Container(
+          left: x + 30, top: y - 24,
+          child: pw.SizedBox(width: 205, child: pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: pw.BoxDecoration(
               color: PdfColors.grey200,
@@ -131,7 +131,7 @@ class OmrSheetService {
               borderRadius: pw.BorderRadius.circular(3),
             ),
             child: pw.Center(child: _rtl(title, font, 8)),
-          ),
+          )),
         ));
       }
       final number = (q + 1).toString().padLeft(2, '0');
