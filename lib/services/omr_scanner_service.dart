@@ -30,7 +30,12 @@ class OmrScannerService {
     return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks);
   }
   imglib.Image _warp(imglib.Image source, List<ScanPoint> corners) {
-    final dst = <ScanPoint>[const ScanPoint(0, 0), const ScanPoint(outputWidth - 1.0, 0), const ScanPoint(outputWidth - 1.0, outputHeight - 1.0), const ScanPoint(0, outputHeight - 1.0)];
+    final dst = <ScanPoint>[
+      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 145 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(550 / OmrSheetService.pageWidth * outputWidth, 145 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(550 / OmrSheetService.pageWidth * outputWidth, 808 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 808 / OmrSheetService.pageHeight * outputHeight),
+    ];
     final h = _homography(dst, corners);
     final out = imglib.Image(width: outputWidth, height: outputHeight, numChannels: 3);
     for (var y = 0; y < outputHeight; y++) {
