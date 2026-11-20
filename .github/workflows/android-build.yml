@@ -44,6 +44,12 @@ jobs:
           p.write_text(s)
           print(p.read_text())
           PY
+      - name: Download Arabic PDF font
+        run: |
+          mkdir -p assets/fonts
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf -o assets/fonts/Amiri-Regular.ttf
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/OFL.txt -o assets/fonts/OFL-Amiri.txt
+          test -s assets/fonts/Amiri-Regular.ttf
       - name: Resolve packages
         run: flutter pub get
       - name: Analyze Dart code
