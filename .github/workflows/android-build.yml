@@ -1,0 +1,66 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - feature/flutter-omr-app
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.10'
+          cache: true
+      - name: Generate Android platform files
+        run: flutter create --platforms=android --org com.alqadi --project-name alqadi_smart_exam_checker --no-pub .
+      - name: Configure Android plugin repositories
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/settings.gradle.kts")
+          s = p.read_text()
+          start = s.find("pluginManagement {")
+          end = s.find("plugins {", start)
+          block = s[start:end if end >= 0 else len(s)]
+          additions = []
+          if "google()" not in block:
+              additions.append("        google()")
+          if "mavenCentral()" not in block:
+              additions.append("        mavenCentral()")
+          if additions:
+              insertion = "repositories {" + chr(10) + chr(10).join(additions)
+              s = s.replace("repositories {", insertion, 1)
+          p.write_text(s)
+          print(p.read_text())
+          PY
+      - name: Download Arabic PDF font
+        run: |
+          mkdir -p assets/fonts
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf -o assets/fonts/Amiri-Regular.ttf
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/OFL.txt -o assets/fonts/OFL-Amiri.txt
+          test -s assets/fonts/Amiri-Regular.ttf
+      - name: Resolve packages
+        run: flutter pub get
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run tests
+        run: flutter test
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alqadi-smart-exam-checker-android
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
