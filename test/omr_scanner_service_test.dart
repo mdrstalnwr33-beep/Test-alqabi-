@@ -22,8 +22,11 @@ void main() {
     ScanPoint(29, 815),
   ];
 
-  imglib.Image blankSheet() => imglib.Image(width: 595, height: 842)
-    ..clear(color: imglib.ColorRgb8(255, 255, 255));
+  imglib.Image blankSheet() {
+    final image = imglib.Image(width: 595, height: 842);
+    imglib.fill(image, color: imglib.ColorRgb8(255, 255, 255));
+    return image;
+  }
 
   void shade(imglib.Image image, Exam exam, int question, int option) {
     final p = OmrSheetService.positionFor(exam, question, option);
