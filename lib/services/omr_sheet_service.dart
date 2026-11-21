@@ -131,9 +131,9 @@ class OmrSheetService {
       widgets.add(pw.Positioned(
         left: x + 34, top: y - 8,
         child: pw.Container(
-          width: 38, height: 16,
+          width: 28, height: 16,
           alignment: pw.Alignment.center,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 1),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 0),
           decoration: pw.BoxDecoration(
             color: isTf ? PdfColor.fromInt(0xFFE5F4EF) : PdfColor.fromInt(0xFFE8EFFB),
             border: pw.Border.all(
@@ -142,7 +142,7 @@ class OmrSheetService {
             ),
             borderRadius: pw.BorderRadius.circular(3),
           ),
-          child: _rtl(isTf ? 'صح/خطأ' : 'اختيار', font, 7),
+          child: _rtl(isTf ? 'صح/خطأ' : 'اختيار', font, 6.5),
         ),
       ));
       final number = (q + 1).toString().padLeft(2, '0');
