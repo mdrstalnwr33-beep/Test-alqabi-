@@ -129,9 +129,9 @@ class OmrSheetService {
       // It avoids overlapping the answer bubbles even when question types alternate.
       final isTf = exam.questionTypes[q] == 'tf';
       widgets.add(pw.Positioned(
-        left: x + 28, top: y - 8,
+        left: x + 34, top: y - 8,
         child: pw.Container(
-          width: 44, height: 16,
+          width: 38, height: 16,
           alignment: pw.Alignment.center,
           padding: const pw.EdgeInsets.symmetric(horizontal: 1),
           decoration: pw.BoxDecoration(
