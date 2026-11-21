@@ -81,6 +81,11 @@ class OmrSheetService {
       pw.Positioned(left: 28, right: 28, top: 18, child: pw.Center(child: _rtl('القاضي الذكي لتصحيح الاختبارات', arabic, 17))),
       pw.Positioned(left: 28, top: 48, child: pw.SizedBox(width: 264, child: instructions)),
       pw.Positioned(left: 303, top: 48, child: pw.SizedBox(width: 264, child: header)),
+      // Section legend is kept in the clear band above the answer grid.
+      pw.Positioned(left: 40, top: 214, child: _sectionLegend(
+        'حل فقرات الاختيار من متعدد', false, arabic)),
+      pw.Positioned(left: 315, top: 214, child: _sectionLegend(
+        'حل فقرات الصح والخطأ', true, arabic)),
       _marker(22, 190), _marker(550, 190), _marker(22, 808), _marker(550, 808),
       ..._questionWidgets(exam, arabic),
       pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
@@ -93,6 +98,22 @@ class OmrSheetService {
     child: pw.Text(ArabicReshaper.instance.reshape(text), textAlign: pw.TextAlign.right,
       style: pw.TextStyle(font: font, fontSize: size)),
   );
+
+  static pw.Widget _sectionLegend(String title, bool isTf, pw.Font font) =>
+      pw.Container(
+        width: 235, height: 24,
+        alignment: pw.Alignment.center,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5),
+        decoration: pw.BoxDecoration(
+          color: isTf ? PdfColor.fromInt(0xFFE5F4EF) : PdfColor.fromInt(0xFFE8EFFB),
+          border: pw.Border.all(
+            color: isTf ? PdfColor.fromInt(0xFF4C9B83) : PdfColor.fromInt(0xFF5879B8),
+            width: 0.8,
+          ),
+          borderRadius: pw.BorderRadius.circular(4),
+        ),
+        child: _rtl(title, font, 8),
+      );
 
   static pw.Widget _marker(double x, double y) => pw.Positioned(left: x, top: y,
       child: pw.Container(width: 14, height: 14, color: PdfColors.black));
