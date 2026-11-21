@@ -72,11 +72,9 @@ class OmrSheetService {
         pw.SizedBox(height: 3),
         _rtl('٢- استخدم قلماً أسود جافاً واملأ الدائرة بالكامل.', arabic, 9),
         pw.SizedBox(height: 4),
-        _rtl('٣- لا تستخدم علامة صح أو تضع دائرة حول الحرف.', arabic, 9),
+        _rtl('٣- لا تضع علامة صح؛ ظلّل الدائرة بالكامل.', arabic, 9),
         pw.SizedBox(height: 4),
-        _rtl('٤- تأكد من اختيار الإجابة الصحيحة قبل التظليل.', arabic, 9),
-        pw.SizedBox(height: 4),
-        _rtl('٥- حافظ على الورقة نظيفة ومسطحة لتسهيل التصحيح.', arabic, 9),
+        _rtl('٤- لا تثنِ الورقة أو تكتب داخل دوائر الإجابة.', arabic, 9),
       ]),
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
@@ -106,26 +104,26 @@ class OmrSheetService {
     for (var q = 0; q < exam.questionCount; q++) {
       final right = q >= rows, row = right ? q - rows : q;
       final x = right ? _rightX : _leftX, y = _top + row * pitch;
-      // Print a clear section heading immediately above the first question
-      // of each type in each column (MCQ and true/false are kept distinct).
-      final isSectionStart = row == 0 ||
-          exam.questionTypes[q] != exam.questionTypes[q - 1];
-      if (isSectionStart) {
-        final isTf = exam.questionTypes[q] == 'tf';
-        final title = isTf ? 'حل فقرات الصح والخطأ' : 'حل فقرات الاختيار من متعدد';
-        widgets.add(pw.Positioned(
-          left: x + 30, top: y - (row == 0 ? 32 : 40),
-          child: pw.SizedBox(width: 205, child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: pw.BoxDecoration(
-              color: isTf ? PdfColor.fromInt(0xFFE5F4EF) : PdfColor.fromInt(0xFFE8EFFB),
-              border: pw.Border.all(color: isTf ? PdfColor.fromInt(0xFF4C9B83) : PdfColor.fromInt(0xFF5879B8), width: 0.7),
-              borderRadius: pw.BorderRadius.circular(3),
+      // A compact, color-coded type badge sits beside every question.
+      // It avoids overlapping the answer bubbles even when question types alternate.
+      final isTf = exam.questionTypes[q] == 'tf';
+      widgets.add(pw.Positioned(
+        left: x + 28, top: y - 8,
+        child: pw.Container(
+          width: 44, height: 16,
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 1),
+          decoration: pw.BoxDecoration(
+            color: isTf ? PdfColor.fromInt(0xFFE5F4EF) : PdfColor.fromInt(0xFFE8EFFB),
+            border: pw.Border.all(
+              color: isTf ? PdfColor.fromInt(0xFF4C9B83) : PdfColor.fromInt(0xFF5879B8),
+              width: 0.65,
             ),
-            child: pw.Center(child: _rtl(title, font, 8)),
-          )),
-        ));
-      }
+            borderRadius: pw.BorderRadius.circular(3),
+          ),
+          child: _rtl(isTf ? 'صح/خطأ' : 'اختيار', font, 7),
+        ),
+      ));
       final number = (q + 1).toString().padLeft(2, '0');
       widgets.add(pw.Positioned(left: x, top: y - 7,
         child: pw.SizedBox(width: 31, child: pw.Text(number, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)))));
