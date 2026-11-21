@@ -55,9 +55,20 @@ class _ScanScreenState extends State<ScanScreen> {
       final nameOk = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
         title: const Text('بيانات الطالب'),
         content: TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'اسم الطالب')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('متابعة للمراجعة'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () {
+          if (nameController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اكتب اسم الطالب أولاً.')));
+            return;
+          }
+          Navigator.pop(context, true);
+        }, child: const Text('متابعة للمراجعة'))],
       ));
-      if (nameOk != true || !mounted) return;
+      if (nameOk != true || !mounted) {
+        nameController.dispose();
+        return;
+      }
+      final studentName = nameController.text.trim();
+      nameController.dispose();
       final reviewed = await Navigator.push<List<int?>>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout)));
       if (reviewed == null || !mounted) return;
       var correct = 0, incorrect = 0, unanswered = 0;
@@ -69,7 +80,7 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
-        studentName: nameController.text.trim().isEmpty ? 'طالب بدون اسم' : nameController.text.trim(),
+        studentName: studentName,
         responses: reviewed, correct: correct, incorrect: incorrect, unanswered: unanswered,
         ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
       );
