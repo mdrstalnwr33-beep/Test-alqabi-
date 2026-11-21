@@ -181,21 +181,54 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: Row(children: [
-                SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                SizedBox(width: 104, child: DropdownButton<String>(isExpanded: true, value: questionTypes[i], items: const [DropdownMenuItem(value: 'mcq', child: Text('اختيار')), DropdownMenuItem(value: 'tf', child: Text('صح/خطأ'))], onChanged: (v) => setState(() { questionTypes[i] = v!; if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) answers[i] = null; }))),
-                ...List.generate(questionTypes[i] == 'tf' ? 2 : widget.exam.optionCount, (j) => Expanded(
-                  child: RadioListTile<int>(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
-                    title: Text(questionTypes[i] == 'tf' ? (j == 0 ? 'صح' : 'خطأ') : String.fromCharCode(65 + j)),
-                    value: j,
-                    groupValue: answers[i],
-                    onChanged: (v) => setState(() => answers[i] = v),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [
+                    CircleAvatar(
+                      radius: 15,
+                      child: Text((i + 1).toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('نوع السؤال', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: questionTypes[i],
+                        items: const [
+                          DropdownMenuItem(value: 'mcq', child: Text('اختيار من متعدد')),
+                          DropdownMenuItem(value: 'tf', child: Text('صح أو خطأ')),
+                        ],
+                        onChanged: (v) => setState(() {
+                          questionTypes[i] = v!;
+                          if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) {
+                            answers[i] = null;
+                          }
+                        }),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: List.generate(
+                      questionTypes[i] == 'tf' ? 2 : widget.exam.optionCount,
+                      (j) => ChoiceChip(
+                        label: Text(
+                          questionTypes[i] == 'tf'
+                              ? (j == 0 ? 'صح' : 'خطأ')
+                              : String.fromCharCode(65 + j),
+                        ),
+                        selected: answers[i] == j,
+                        onSelected: (_) => setState(() => answers[i] = j),
+                        avatar: answers[i] == j ? const Icon(Icons.check, size: 16) : null,
+                      ),
+                    ),
                   ),
-                )),
-              ]),
+                ],
+              ),
             ),
           ),
         ),
