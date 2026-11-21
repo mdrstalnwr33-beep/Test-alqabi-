@@ -71,8 +71,8 @@ void main() {
 
   test('rejects corners supplied in the wrong order', () async {
     final image = blankSheet();
-    expect(
-      () => OmrScannerService().scan(
+    await expectLater(
+      OmrScannerService().scan(
         imageBytes: imglib.encodePng(image),
         corners: const [
           ScanPoint(29, 197),
