@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> newExam() async {
     final title = TextEditingController(), subject = TextEditingController();
     final school = TextEditingController(), teacher = TextEditingController();
-    final mcqCount = TextEditingController(text: '20'), tfCount = TextEditingController(text: '0'), options = TextEditingController(text: '4');
+    final tfCount = TextEditingController(text: '10'), mcqCount = TextEditingController(text: '10'), options = TextEditingController(text: '4');
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('إنشاء اختبار جديد'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -48,9 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 10), TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
         const SizedBox(height: 10), TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         const SizedBox(height: 10), TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
-        const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الاختيار من متعدد')),
-        const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد أسئلة الصح والخطأ')),
-        const SizedBox(height: 6), const Text('يمكن الجمع بين النوعين في الاختبار نفسه.', style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'أولاً: عدد أسئلة الصح والخطأ')),
+        const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ثانياً: عدد أسئلة الاختيار من متعدد')),
+        const SizedBox(height: 6), const Text('سيُرتّب الاختبار الصح والخطأ أولاً، ثم الاختيار من متعدد. يمكنك تعديل الأعداد.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 10), TextField(controller: options, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد الخيارات (2–5)')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إنشاء'))],
@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة (حتى 40 في الورقة الواحدة) والخيارات.')));
       return;
     }
-    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(mcq, 'mcq'), ...List<String>.filled(tf, 'tf')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
+    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(tf, 'tf'), ...List<String>.filled(mcq, 'mcq')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
     await _persist();
   }
   void addResult(ExamResult result) async {
