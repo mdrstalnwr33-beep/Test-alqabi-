@@ -16,8 +16,6 @@ class OmrSheetService {
   static const _leftX = 34.0, _rightX = 305.0;
   static const _radius = 8.5;
 
-  static int get trueFalseCountForLayout => 0;
-
   static int _trueFalseCount(Exam exam) =>
       exam.questionTypes.take(exam.questionCount).where((type) => type == 'tf').length;
 
