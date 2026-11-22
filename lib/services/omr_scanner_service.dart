@@ -25,8 +25,8 @@ class OmrScannerService {
       }
       final ranked = List<int>.generate(scores.length, (i) => i)..sort((a, b) => scores[b].compareTo(scores[a]));
       final best = scores[ranked.first], second = ranked.length > 1 ? scores[ranked[1]] : 0.0;
-      if (best < 0.22) { answers.add(null); blanks.add(q + 1); }
-      else if (best < 0.48 || best - second < 0.14) { answers.add(null); ambiguous.add(q + 1); }
+      if (best < 0.22) { answers.add(null); blanks.add(OmrSheetService.visualQuestionNumber(exam, q)); }
+      else if (best < 0.48 || best - second < 0.14) { answers.add(null); ambiguous.add(OmrSheetService.visualQuestionNumber(exam, q)); }
       else { answers.add(ranked.first); }
     }
     return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks);
