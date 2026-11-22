@@ -41,4 +41,28 @@ void main() {
     expect(exam.optionsFor(2), 4);
     expect(exam.optionsFor(3), 2);
   });
+
+  test('true-false questions appear first, followed by multiple choice', () {
+    final exam = Exam(
+      id: 'ordered-form-123',
+      title: 'اختبار تجريبي',
+      subject: 'العلوم',
+      questionCount: 5,
+      optionCount: 4,
+      answerKey: List<int?>.filled(5, null),
+      questionTypes: const ['mcq', 'tf', 'mcq', 'tf', 'mcq'],
+    );
+
+    expect(OmrSheetService.visualQuestionNumber(exam, 1), 1);
+    expect(OmrSheetService.visualQuestionNumber(exam, 3), 2);
+    expect(OmrSheetService.visualQuestionNumber(exam, 0), 3);
+    expect(OmrSheetService.visualQuestionNumber(exam, 2), 4);
+    expect(OmrSheetService.visualQuestionNumber(exam, 4), 5);
+
+    final tf = OmrSheetService.positionFor(exam, 1, 0);
+    final mcq = OmrSheetService.positionFor(exam, 0, 0);
+    expect(tf.x, greaterThan(mcq.x));
+    expect(tf.y, lessThan(mcq.y));
+  });
+
 }
