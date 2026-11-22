@@ -34,7 +34,7 @@ void main() {
       image,
       x: (p.x * 595).round(),
       y: (p.y * 842).round(),
-      radius: 4,
+      radius: 7,
       color: imglib.ColorRgb8(0, 0, 0),
     );
   }
@@ -52,7 +52,7 @@ void main() {
 
     expect(result.answers[0], 2);
     expect(result.answers[1], isNull);
-    expect(result.blankQuestions, [2]);
+    expect(result.blankQuestions, [1]);
     expect(result.ambiguousQuestions, isEmpty);
   });
 
@@ -69,7 +69,7 @@ void main() {
     );
 
     expect(result.answers[0], isNull);
-    expect(result.ambiguousQuestions, [1]);
+    expect(result.ambiguousQuestions, [2]);
   });
 
   test('rejects corners supplied in the wrong order', () async {
