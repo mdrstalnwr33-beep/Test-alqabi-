@@ -16,16 +16,40 @@ class OmrSheetService {
   static const _leftX = 34.0, _rightX = 305.0;
   static const _radius = 8.5;
 
+  static int get trueFalseCountForLayout => 0;
+
+  static int _trueFalseCount(Exam exam) =>
+      exam.questionTypes.take(exam.questionCount).where((type) => type == 'tf').length;
+
+  static int _sectionIndex(Exam exam, int question) {
+    final isTf = exam.questionTypes[question] == 'tf';
+    var index = 0;
+    for (var i = 0; i < question; i++) {
+      if ((exam.questionTypes[i] == 'tf') == isTf) index++;
+    }
+    return index;
+  }
+
+  static int visualQuestionNumber(Exam exam, int question) {
+    final index = _sectionIndex(exam, question);
+    return exam.questionTypes[question] == 'tf'
+        ? index + 1
+        : _trueFalseCount(exam) + index + 1;
+  }
+
   static BubblePosition positionFor(Exam exam, int question, int option) {
-    final rows = (exam.questionCount + 1) ~/ 2;
-    final right = question >= rows;
-    final row = right ? question - rows : question;
-    final baseX = right ? _rightX : _leftX;
+    final tfCount = _trueFalseCount(exam);
+    final mcqCount = exam.questionCount - tfCount;
+    final rows = tfCount > mcqCount ? tfCount : mcqCount;
+    final isTf = exam.questionTypes[question] == 'tf';
+    final row = _sectionIndex(exam, question);
+    final baseX = isTf ? _rightX : _leftX;
     final count = exam.optionsFor(question);
     final gap = count == 2 ? 42.0 : (count == 3 ? 35.0 : 30.0);
-    final start = 76.0;
+    const start = 76.0;
+    final pitch = rows <= 1 ? 0.0 : (_bottom - _top) / (rows - 1);
     return BubblePosition((baseX + start + option * gap) / pageWidth,
-        (_top + row * (rows <= 1 ? 0 : (_bottom - _top) / (rows - 1))) / pageHeight);
+        (_top + row * pitch) / pageHeight);
   }
 
   static Future<Uint8List> buildPdf(Exam exam) async {
@@ -119,15 +143,17 @@ class OmrSheetService {
       child: pw.Container(width: 14, height: 14, color: PdfColors.black));
 
   static List<pw.Widget> _questionWidgets(Exam exam, pw.Font font) {
-    final rows = (exam.questionCount + 1) ~/ 2;
+    final tfCount = _trueFalseCount(exam);
+    final mcqCount = exam.questionCount - tfCount;
+    final rows = tfCount > mcqCount ? tfCount : mcqCount;
     final pitch = rows <= 1 ? 0.0 : (_bottom - _top) / (rows - 1);
     final widgets = <pw.Widget>[];
     for (var q = 0; q < exam.questionCount; q++) {
-      final right = q >= rows, row = right ? q - rows : q;
-      final x = right ? _rightX : _leftX, y = _top + row * pitch;
-      // A compact, color-coded type badge sits beside every question.
-      // It avoids overlapping the answer bubbles even when question types alternate.
       final isTf = exam.questionTypes[q] == 'tf';
+      final row = _sectionIndex(exam, q);
+      // In Arabic reading order, true/false is the first section on the right;
+      // multiple-choice follows in the left column.
+      final x = isTf ? _rightX : _leftX, y = _top + row * pitch;
       widgets.add(pw.Positioned(
         left: x + 34, top: y - 8,
         child: pw.Container(
@@ -145,7 +171,7 @@ class OmrSheetService {
           child: _rtl(isTf ? 'صح/خطأ' : 'اختيار', font, 6.5),
         ),
       ));
-      final number = (q + 1).toString().padLeft(2, '0');
+      final number = visualQuestionNumber(exam, q).toString().padLeft(2, '0');
       widgets.add(pw.Positioned(left: x, top: y - 7,
         child: pw.SizedBox(width: 31, child: pw.Text(number, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)))));
       final count = exam.optionsFor(q);
