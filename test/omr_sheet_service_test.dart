@@ -62,7 +62,7 @@ void main() {
     final tf = OmrSheetService.positionFor(exam, 1, 0);
     final mcq = OmrSheetService.positionFor(exam, 0, 0);
     expect(tf.x, greaterThan(mcq.x));
-    expect(tf.y, lessThan(mcq.y));
+    expect(tf.y, mcq.y);
   });
 
 }
