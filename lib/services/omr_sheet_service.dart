@@ -115,6 +115,11 @@ class OmrSheetService {
     return doc.save();
   }
 
+  static String _arabicDigits(String value) => value.replaceAllMapped(
+    RegExp(r'[0-9]'),
+    (match) => '٠١٢٣٤٥٦٧٨٩'[int.parse(match.group(0)!)],
+  );
+
   static pw.Widget _rtl(String text, pw.Font font, double size) => pw.Directionality(
     textDirection: pw.TextDirection.rtl,
     child: pw.Text(ArabicReshaper.instance.reshape(text), textAlign: pw.TextAlign.right,
@@ -169,9 +174,13 @@ class OmrSheetService {
           child: _rtl(isTf ? 'صح/خطأ' : 'اختيار', font, 6.5),
         ),
       ));
-      final number = visualQuestionNumber(exam, q).toString().padLeft(2, '0');
-      widgets.add(pw.Positioned(left: x, top: y - 7,
-        child: pw.SizedBox(width: 31, child: pw.Text(number, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)))));
+      // Question numbers use Arabic-Indic digits and sit at the far right
+      // of each question row, following Arabic reading direction.
+      final number = _arabicDigits(visualQuestionNumber(exam, q).toString().padLeft(2, '0'));
+      widgets.add(pw.Positioned(left: x + 242, top: y - 7,
+        child: pw.SizedBox(width: 24, child: pw.Text(number,
+          textAlign: pw.TextAlign.right,
+          style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)))));
       final count = exam.optionsFor(q);
       final gap = count == 2 ? 42.0 : (count == 3 ? 35.0 : 30.0);
       for (var option = 0; option < count; option++) {
