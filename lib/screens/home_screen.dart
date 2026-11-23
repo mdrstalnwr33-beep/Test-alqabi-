@@ -158,21 +158,88 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
+  Future<Uint8List> _createSheetPdf() async {
+    final currentExam = Exam(
+      id: widget.exam.id,
+      title: title.text.trim(),
+      subject: subject.text.trim(),
+      questionCount: widget.exam.questionCount,
+      optionCount: widget.exam.optionCount,
+      answerKey: List<int?>.from(answers),
+      createdAt: widget.exam.createdAt,
+      questionTypes: List<String>.from(questionTypes),
+      schoolName: school.text.trim(),
+      teacherName: teacher.text.trim(),
+    );
+    return OmrSheetService.buildPdf(currentExam);
+  }
+
+  Future<void> _showPdfPreview() async {
+    try {
+      final bytes = await _createSheetPdf();
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('معاينة ورقة الإجابة')),
+          body: PdfPreview(
+            build: (_) async => bytes,
+            allowPrinting: true,
+            allowSharing: true,
+            canChangePageFormat: false,
+            canChangeOrientation: false,
+            pdfFileName: 'OMR-${title.text.trim()}.pdf',
+          ),
+        ),
+      ));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذرت معاينة ورقة الإجابة: $error')),
+      );
+    }
+  }
+
+  Future<void> _exportSheetPdf() async {
+    try {
+      final bytes = await _createSheetPdf();
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'OMR-${title.text.trim()}.pdf',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تصدير ملف PDF: $error')),
+      );
+    }
+  }
+
   Future<void> _printSheet() async {
-    if (answers.any((v) => v == null)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل مفتاح الإجابة قبل طباعة الورقة.'))); return; }
-    await _save();
-    final currentExam = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim());
-    final bytes = await OmrSheetService.buildPdf(currentExam);
-    await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'OMR-${title.text.trim()}.pdf');
+    try {
+      final bytes = await _createSheetPdf();
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        name: 'OMR-${title.text.trim()}.pdf',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذرت طباعة ورقة الإجابة: $error')),
+      );
+    }
   }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title.text), actions: [IconButton(tooltip: 'تعديل بيانات الاختبار', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
+    appBar: AppBar(title: Text(title.text), actions: [IconButton(tooltip: 'تعديل بيانات الاختبار', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'تصدير PDF', onPressed: _exportSheetPdf, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'معاينة ورقة الإجابة', onPressed: _showPdfPreview, icon: const Icon(Icons.preview)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
         const SizedBox(height: 6), const Text('اختر نوع كل سؤال (اختيار من متعدد أو صح/خطأ)، ثم حدد الإجابة الصحيحة واطبع الورقة.', style: TextStyle(color: Colors.black54)),
-        const SizedBox(height: 8), OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.picture_as_pdf), label: const Text('معاينة وطباعة ورقة الإجابة')),
+        const SizedBox(height: 8), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+          OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
+          OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
+          OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.print), label: const Text('طباعة الورقة')),
+        ]),
       ])),
       Expanded(
         child: ListView.builder(
