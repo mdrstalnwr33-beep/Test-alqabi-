@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../assets/alqadi_logo_data.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:arabic_reshaper/arabic_reshaper.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/exam.dart';
@@ -61,6 +62,13 @@ class OmrSheetService {
       throw StateError('تعذر تحميل خط اللغة العربية المضمن: $error');
     }
     final bold = arabic;
+    // Normalize the embedded JPEG logo to PNG. The PDF image decoder can
+    // reject some otherwise valid JPEG encodings; PNG avoids that failure.
+    final logoImage = img.decodeImage(base64Decode(alqadiLogoJpegBase64));
+    if (logoImage == null) {
+      throw StateError('تعذر قراءة شعار الأستاذ محمد القاضي.');
+    }
+    final logoPngBytes = Uint8List.fromList(img.encodePng(logoImage));
     // The existing exam header is placed on the right side of the sheet.
     final header = pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -103,7 +111,7 @@ class OmrSheetService {
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
       pw.Positioned(left: 210, right: 210, top: 4, child: pw.Center(child: pw.Image(
-        pw.MemoryImage(base64Decode(alqadiLogoJpegBase64)),
+        pw.MemoryImage(logoPngBytes),
         width: 175, height: 68, fit: pw.BoxFit.contain,
       ))),
       pw.Positioned(left: 28, top: 76, child: pw.SizedBox(width: 264, child: instructions)),
