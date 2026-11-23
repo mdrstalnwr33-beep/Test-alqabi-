@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'dart:convert';
+import '../assets/alqadi_logo_data.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:arabic_reshaper/arabic_reshaper.dart';
 import 'package:pdf/pdf.dart';
@@ -100,9 +102,12 @@ class OmrSheetService {
       ]),
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
-      pw.Positioned(left: 28, right: 28, top: 18, child: pw.Center(child: _rtl('القاضي الذكي لتصحيح الاختبارات', arabic, 17))),
-      pw.Positioned(left: 28, top: 48, child: pw.SizedBox(width: 264, child: instructions)),
-      pw.Positioned(left: 303, top: 48, child: pw.SizedBox(width: 264, child: header)),
+      pw.Positioned(left: 210, right: 210, top: 4, child: pw.Center(child: pw.Image(
+        pw.MemoryImage(base64Decode(alqadiLogoJpegBase64)),
+        width: 175, height: 68, fit: pw.BoxFit.contain,
+      ))),
+      pw.Positioned(left: 28, top: 76, child: pw.SizedBox(width: 264, child: instructions)),
+      pw.Positioned(left: 303, top: 76, child: pw.SizedBox(width: 264, child: header)),
       // Section legend is kept in the clear band above the answer grid.
       pw.Positioned(left: 40, top: 214, child: _sectionLegend(
         'حل فقرات الاختيار من متعدد', false, arabic)),
