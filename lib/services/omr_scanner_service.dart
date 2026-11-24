@@ -143,13 +143,13 @@ class OmrScannerService {
       final rawName = await recognize(top: 300, fileName: 'student_name');
       final rawSeat = await recognize(top: 338, fileName: 'seat_number');
       final name = rawName
-          .replaceAll(RegExp(r'اسم\\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
-          .replaceAll(RegExp(r'\\s+'), ' ').trim();
+          .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ').trim();
       final digits = rawSeat.replaceAll('٠','0').replaceAll('١','1')
           .replaceAll('٢','2').replaceAll('٣','3').replaceAll('٤','4')
           .replaceAll('٥','5').replaceAll('٦','6').replaceAll('٧','7')
           .replaceAll('٨','8').replaceAll('٩','9');
-      return (name, RegExp(r'\\d+').firstMatch(digits)?.group(0) ?? '');
+      return (name, RegExp(r'\d+').firstMatch(digits)?.group(0) ?? '');
     } catch (_) {
       return ('', '');
     }
