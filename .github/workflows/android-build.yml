@@ -50,6 +50,14 @@ jobs:
           curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf -o assets/fonts/Amiri-Regular.ttf
           curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/OFL.txt -o assets/fonts/OFL-Amiri.txt
           test -s assets/fonts/Amiri-Regular.ttf
+      - name: Download offline OCR language models
+        run: |
+          mkdir -p assets/tessdata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/ara.traineddata -o assets/tessdata/ara.traineddata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata -o assets/tessdata/eng.traineddata
+          test -s assets/tessdata/ara.traineddata
+          test -s assets/tessdata/eng.traineddata
+          printf '{"files":["ara.traineddata","eng.traineddata"]}' > assets/tessdata_config.json
       - name: Resolve packages
         run: flutter pub get
       - name: Analyze Dart code
