@@ -10,12 +10,94 @@ class OmrReadout {
 }
 class OmrScannerService {
   static const outputWidth = 1190, outputHeight = 1684;
-  Future<OmrReadout> scan({required List<int> imageBytes, required List<ScanPoint> corners, required Exam exam}) async {
-    if (corners.length != 4) throw ArgumentError('حدد زوايا الورقة الأربع.');
-    final source = imglib.decodeImage(Uint8List.fromList(imageBytes));
+  Future<List<ScanPoint>> detectCorners(Uint8List imageBytes) async {
+    final decoded = imglib.decodeImage(imageBytes);
+    if (decoded == null) throw StateError('تعذر قراءة الصورة.');
+    final scale = decoded.width > 1200 ? 1200 / decoded.width : 1.0;
+    final small = scale < 1 ? imglib.copyResize(decoded, width: 1200) : decoded;
+    final w = small.width, h = small.height;
+    final seen = Uint8List(w * h);
+    final queue = <int>[];
+    final candidates = <ScanPoint>[];
+    final sizes = <List<int>>[];
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final start = y * w + x;
+        if (seen[start] != 0) continue;
+        final p = small.getPixel(x, y);
+        final gray = 0.299 * p.r + 0.587 * p.g + 0.114 * p.b;
+        if (gray > 65) { seen[start] = 1; continue; }
+        queue
+          ..clear()
+          ..add(start);
+        seen[start] = 1;
+        var head = 0, minX = x, maxX = x, minY = y, maxY = y;
+        while (head < queue.length) {
+          final index = queue[head++], px = index % w, py = index ~/ w;
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              final nx = px + dx, ny = py + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              final ni = ny * w + nx;
+              if (seen[ni] != 0) continue;
+              seen[ni] = 1;
+              final np = small.getPixel(nx, ny);
+              final ng = 0.299 * np.r + 0.587 * np.g + 0.114 * np.b;
+              if (ng <= 65) queue.add(ni);
+            }
+          }
+        }
+        final bw = maxX - minX + 1, bh = maxY - minY + 1;
+        final ratio = bw / bh;
+        final area = bw * bh;
+        if (bw >= 7 && bh >= 7 && bw <= w * 0.045 && bh <= w * 0.045 &&
+            ratio >= 0.68 && ratio <= 1.45 && queue.length >= area * 0.48) {
+          candidates.add(ScanPoint((minX + maxX) / 2, (minY + maxY) / 2));
+          sizes.add([bw, bh]);
+        }
+      }
+    }
+    if (candidates.length < 4) {
+      throw StateError('لم أتمكن من اكتشاف المربعات السوداء الأربعة. صوّر الورقة كاملة بإضاءة جيدة ومن دون قص الأطراف.');
+    }
+    final targets = <ScanPoint>[
+      ScanPoint(w * 0.037, h * 0.226),
+      ScanPoint(w * 0.924, h * 0.226),
+      ScanPoint(w * 0.924, h * 0.960),
+      ScanPoint(w * 0.037, h * 0.960),
+    ];
+    final selected = <ScanPoint>[];
+    final used = <int>{};
+    for (final target in targets) {
+      var best = -1, bestScore = double.infinity;
+      for (var i = 0; i < candidates.length; i++) {
+        if (used.contains(i)) continue;
+        final p = candidates[i];
+        final dx = (p.x - target.x) / w, dy = (p.y - target.y) / h;
+        final score = dx * dx + dy * dy;
+        if (score < bestScore) { bestScore = score; best = i; }
+      }
+      if (best < 0 || bestScore > 0.035) {
+        throw StateError('تعذر تحديد أحد مربعات المعايرة. تأكد من ظهور الورقة كاملة داخل الصورة.');
+      }
+      used.add(best);
+      selected.add(ScanPoint(candidates[best].x / scale, candidates[best].y / scale));
+    }
+    return selected;
+  }
+
+  Future<OmrReadout> scan({required List<int> imageBytes, List<ScanPoint>? corners, required Exam exam}) async {
+    final bytes = Uint8List.fromList(imageBytes);
+    final source = imglib.decodeImage(bytes);
     if (source == null) throw StateError('تعذر قراءة الصورة.');
-    _validateCorners(corners, source.width, source.height);
-    final warped = _warp(source, corners);
+    final detectedCorners = corners ?? await detectCorners(bytes);
+    if (detectedCorners.length != 4) throw ArgumentError('تعذر تحديد زوايا الورقة تلقائياً.');
+    _validateCorners(detectedCorners, source.width, source.height);
+    final warped = _warp(source, detectedCorners);
     final answers = <int?>[], ambiguous = <int>[], blanks = <int>[];
     for (var q = 0; q < exam.questionCount; q++) {
       final scores = <double>[];
