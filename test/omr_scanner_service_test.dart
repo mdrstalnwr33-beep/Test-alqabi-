@@ -30,7 +30,7 @@ void main() {
 
   imglib.Image sheetWithCornerMarkers() {
     final image = blankSheet();
-    const black = imglib.ColorRgb8(0, 0, 0);
+    final black = imglib.ColorRgb8(0, 0, 0);
     imglib.fillRect(image, x1: 15, y1: 17, x2: 28, y2: 30, color: black);
     imglib.fillRect(image, x1: 566, y1: 17, x2: 579, y2: 30, color: black);
     imglib.fillRect(image, x1: 566, y1: 796, x2: 579, y2: 809, color: black);
