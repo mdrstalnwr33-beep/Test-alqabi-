@@ -123,7 +123,8 @@ class OmrSheetService {
         'حل فقرات الاختيار من متعدد', false, arabic)),
       pw.Positioned(left: 315, top: 214, child: _sectionLegend(
         'حل فقرات الصح والخطأ', true, arabic)),
-      _marker(22, 190), _marker(550, 190), _marker(22, 808), _marker(550, 808),
+      // Fixed calibration markers: same four page-corner positions as the printed reference form.
+      _marker(15, 17), _marker(566, 17), _marker(566, 796), _marker(15, 796),
       ..._questionWidgets(exam, arabic),
       pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
     ])));
