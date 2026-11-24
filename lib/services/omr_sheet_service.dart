@@ -190,12 +190,15 @@ class OmrSheetService {
       // Question numbers use Arabic-Indic digits and sit at the far right
       // of each question row, following Arabic reading direction.
       final number = _arabicDigits(visualQuestionNumber(exam, q).toString().padLeft(2, '0'));
-      widgets.add(pw.Positioned(left: x + 242, top: y - 7,
+      final count = exam.optionsFor(q);
+      final gap = count == 2 ? 42.0 : (count == 3 ? 35.0 : 30.0);
+      // Keep the question number close to the last answer bubble. This is
+      // calculated per question type so TF (2 bubbles) does not leave a wide gap.
+      final lastBubbleCenter = 76.0 + (count - 1) * gap;
+      widgets.add(pw.Positioned(left: x + lastBubbleCenter + 17, top: y - 7,
         child: pw.SizedBox(width: 24, child: pw.Text(number,
           textAlign: pw.TextAlign.right,
           style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)))));
-      final count = exam.optionsFor(q);
-      final gap = count == 2 ? 42.0 : (count == 3 ? 35.0 : 30.0);
       for (var option = 0; option < count; option++) {
         final cx = x + 76 + option * gap;
         widgets.add(pw.Positioned(left: cx - _radius, top: y - _radius,
