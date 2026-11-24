@@ -130,12 +130,10 @@ class _ScanScreenState extends State<ScanScreen> {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final img = snapshot.data!;
         final scale = _fitScale(img.width.toDouble(), img.height.toDouble(), constraints.maxWidth, constraints.maxHeight);
-        final drawnW = img.width * scale, drawnH = img.height * scale;
-        final offsetX = (constraints.maxWidth - drawnW) / 2, offsetY = (constraints.maxHeight - drawnH) / 2;
         return Stack(alignment: Alignment.center, children: [
             Image.file(file, fit: BoxFit.contain, width: constraints.maxWidth, height: constraints.maxHeight),
             Positioned(top: 8, right: 8, child: DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(.65), borderRadius: BorderRadius.circular(8)), child: const Padding(padding: EdgeInsets.all(7), child: Text('اكتشاف تلقائي للزوايا', style: TextStyle(color: Colors.white))))),
-          ]),
+          ]);
       },
     );
   }));
