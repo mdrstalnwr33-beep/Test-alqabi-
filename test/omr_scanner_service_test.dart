@@ -16,15 +16,25 @@ void main() {
   );
 
   List<ScanPoint> corners() => const [
-    ScanPoint(29, 197),
-    ScanPoint(557, 197),
-    ScanPoint(557, 815),
-    ScanPoint(29, 815),
+    ScanPoint(22, 24),
+    ScanPoint(573, 24),
+    ScanPoint(573, 803),
+    ScanPoint(22, 803),
   ];
 
   imglib.Image blankSheet() {
     final image = imglib.Image(width: 595, height: 842);
     imglib.fill(image, color: imglib.ColorRgb8(255, 255, 255));
+    return image;
+  }
+
+  imglib.Image sheetWithCornerMarkers() {
+    final image = blankSheet();
+    const black = imglib.ColorRgb8(0, 0, 0);
+    imglib.fillRect(image, x1: 15, y1: 17, x2: 28, y2: 30, color: black);
+    imglib.fillRect(image, x1: 566, y1: 17, x2: 579, y2: 30, color: black);
+    imglib.fillRect(image, x1: 566, y1: 796, x2: 579, y2: 809, color: black);
+    imglib.fillRect(image, x1: 15, y1: 796, x2: 28, y2: 809, color: black);
     return image;
   }
 
@@ -38,6 +48,21 @@ void main() {
       color: imglib.ColorRgb8(0, 0, 0),
     );
   }
+
+
+  test('automatically detects the four fixed page-corner markers', () async {
+    final image = sheetWithCornerMarkers();
+    final detected = await OmrScannerService().detectCorners(imglib.encodePng(image));
+    expect(detected, hasLength(4));
+    expect(detected[0].x, closeTo(22, 1));
+    expect(detected[0].y, closeTo(24, 1));
+    expect(detected[1].x, closeTo(573, 1));
+    expect(detected[1].y, closeTo(24, 1));
+    expect(detected[2].x, closeTo(573, 1));
+    expect(detected[2].y, closeTo(803, 1));
+    expect(detected[3].x, closeTo(22, 1));
+    expect(detected[3].y, closeTo(803, 1));
+  });
 
   test('reads a black-pen mark and preserves a blank answer', () async {
     final exam = makeExam();
