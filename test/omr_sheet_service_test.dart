@@ -65,4 +65,43 @@ void main() {
     expect(tf.y, mcq.y);
   });
 
+  test('generates 30 distinct reproducible variants and keeps the original key mapping', () {
+    final types = <String>['tf', 'tf', 'mcq', 'mcq', 'mcq'];
+    final first = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, count: 30);
+    final second = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, count: 30);
+    expect(first.length, 30);
+    expect(first.map((v) => v.code).toSet().length, 30);
+    expect(first.map((v) => v.questionOrder.join(',')).toSet().length, greaterThan(1));
+    expect(first.map((v) => v.code).toList(), second.map((v) => v.code).toList());
+    for (var i = 0; i < first.length; i++) {
+      expect(first[i].questionOrder, second[i].questionOrder);
+      expect(first[i].optionOrder, second[i].optionOrder);
+    }
+    final originalKey = <int?>[1, 0, 2, 3, 1];
+    for (final variant in first) {
+      for (var displayedQuestion = 0; displayedQuestion < types.length; displayedQuestion++) {
+        final displayedCorrect = variant.getDisplayedAnswer(displayedQuestion, originalKey);
+        final originalQuestion = variant.questionOrder[displayedQuestion];
+        expect(variant.optionOrder[originalQuestion][displayedCorrect!], originalKey[originalQuestion]);
+      }
+    }
+    expect(originalKey, <int?>[1, 0, 2, 3, 1]);
+  });
+
+  test('exam variants survive local JSON serialization and old exam data remains readable', () {
+    final exam = Exam(
+      id: 'exam-123456', title: 'اختبار', subject: 'علوم', questionCount: 2,
+      optionCount: 4, answerKey: const [1, 2], questionTypes: const ['tf', 'mcq'],
+      variants: ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: const ['tf', 'mcq'], optionCount: 4, count: 30),
+    );
+    final restored = Exam.fromJson(exam.toJson());
+    expect(restored.variants.length, 30);
+    expect(restored.variants.first.code, exam.variants.first.code);
+    final legacy = Exam.fromJson({
+      'id': 'old', 'title': 'قديم', 'subject': '', 'questionCount': 1,
+      'optionCount': 4, 'answerKey': [0], 'questionTypes': ['mcq'],
+    });
+    expect(legacy.variants, isEmpty);
+  });
+
 }
