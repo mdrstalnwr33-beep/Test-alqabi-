@@ -51,25 +51,9 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       final readout = await scanner.scan(imageBytes: await photo.readAsBytes(), exam: exam);
       if (!mounted) return;
-      final nameController = TextEditingController();
-      final nameOk = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-        title: const Text('بيانات الطالب'),
-        content: TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'اسم الطالب')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () {
-          if (nameController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اكتب اسم الطالب أولاً.')));
-            return;
-          }
-          Navigator.pop(context, true);
-        }, child: const Text('متابعة للمراجعة'))],
-      ));
-      if (nameOk != true || !mounted) {
-        nameController.dispose();
-        return;
-      }
-      final studentName = nameController.text.trim();
-      nameController.dispose();
-      final review = await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout, initialStudentName: studentName)));
+      final review = await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(
+        exam: exam, readout: readout,
+      )));
       if (review == null || !mounted) return;
       final reviewed = review.answers;
       var correct = 0, incorrect = 0, unanswered = 0;
@@ -81,7 +65,8 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
-        studentName: review.studentName,
+        studentName: review.studentName.isEmpty ? 'غير مقروء' : review.studentName,
+        seatNumber: review.seatNumber,
         responses: reviewed, correct: correct, incorrect: incorrect, unanswered: unanswered,
         ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
       );
@@ -167,31 +152,34 @@ class _CornerPainter extends CustomPainter {
 }
 
 class _ReviewSubmission {
-  const _ReviewSubmission({required this.answers, required this.studentName});
+  const _ReviewSubmission({required this.answers, required this.studentName, required this.seatNumber});
   final List<int?> answers;
-  final String studentName;
+  final String studentName, seatNumber;
 }
 
 class _ReviewAnswersScreen extends StatefulWidget {
-  const _ReviewAnswersScreen({required this.exam, required this.readout, required this.initialStudentName});
+  const _ReviewAnswersScreen({required this.exam, required this.readout});
   final Exam exam;
   final OmrReadout readout;
-  final String initialStudentName;
   @override
   State<_ReviewAnswersScreen> createState() => _ReviewAnswersScreenState();
 }
 class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
   late List<int?> answers;
-  late final TextEditingController studentNameController;
+  late final TextEditingController studentNameController, seatNumberController;
   @override
-  void initState() { super.initState(); answers = List<int?>.from(widget.readout.answers); studentNameController = TextEditingController(text: widget.initialStudentName); }
+  void initState() { super.initState(); answers = List<int?>.from(widget.readout.answers); studentNameController = TextEditingController(text: widget.readout.studentName); seatNumberController = TextEditingController(text: widget.readout.seatNumber); }
   @override
-  void dispose() { studentNameController.dispose(); super.dispose(); }
+  void dispose() { studentNameController.dispose(); seatNumberController.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('مراجعة الإجابات')),
     body: Column(children: [
-      Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), child: TextField(controller: studentNameController, textDirection: TextDirection.rtl, decoration: const InputDecoration(labelText: 'اسم الطالب', prefixIcon: Icon(Icons.person_outline), border: OutlineInputBorder()))),
+      Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), child: Column(children: [
+        TextField(controller: studentNameController, textDirection: TextDirection.rtl, decoration: InputDecoration(labelText: 'اسم الطالب - قراءة تلقائية', helperText: widget.readout.studentName.isEmpty ? 'لم يُقرأ الاسم بوضوح؛ يمكنك تصحيحه اختيارياً.' : 'تم استخراج الاسم من الورقة.', prefixIcon: const Icon(Icons.person_outline), border: const OutlineInputBorder())),
+        const SizedBox(height: 8),
+        TextField(controller: seatNumberController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'رقم الجلوس / الكود - قراءة تلقائية', helperText: widget.readout.seatNumber.isEmpty ? 'لم يُقرأ الرقم بوضوح.' : 'تم استخراج الرقم من الورقة.', prefixIcon: const Icon(Icons.confirmation_number_outlined), border: const OutlineInputBorder())),
+      ])),
       Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
       Expanded(
         child: ListView.builder(
@@ -225,11 +213,7 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
             child: FilledButton(
               onPressed: () {
                 final name = studentNameController.text.trim();
-                if (name.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل اسم الطالب قبل حفظ النتيجة.')));
-                  return;
-                }
-                Navigator.pop(context, _ReviewSubmission(answers: List<int?>.from(answers), studentName: name));
+                Navigator.pop(context, _ReviewSubmission(answers: List<int?>.from(answers), studentName: name, seatNumber: seatNumberController.text.trim()));
               },
               child: const Text('اعتماد التصحيح وحفظ النتيجة'),
             ),
