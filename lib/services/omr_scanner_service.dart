@@ -104,21 +104,30 @@ class OmrScannerService {
     return List<double>.generate(8, (i) => m[i][8]);
   }
   double _darkRatio(imglib.Image image, int cx, int cy) {
-    // A slightly wider center sample tolerates small camera/registration offsets
-    // while remaining inside the filled core of the printed answer bubble.
-    const radius = 9;
-    var dark = 0, total = 0;
-    for (var y = -radius; y <= radius; y++) {
-      for (var x = -radius; x <= radius; x++) {
-        if (x*x + y*y > radius*radius) continue;
-        final pxX = cx + x, pxY = cy + y;
-        if (pxX < 0 || pxY < 0 || pxX >= image.width || pxY >= image.height) continue;
-        final px = image.getPixel(pxX, pxY);
-        final gray = 0.299 * px.r + 0.587 * px.g + 0.114 * px.b;
-        if (gray < 105) dark++;
-        total++;
+    // Search a small neighborhood for the filled center of the bubble.
+    // This compensates for minor perspective/registration errors after warping,
+    // while avoiding the printed outer ring of an unfilled bubble.
+    const radius = 5;
+    var bestRatio = 0.0;
+    for (var oy = -8; oy <= 8; oy += 2) {
+      for (var ox = -8; ox <= 8; ox += 2) {
+        var dark = 0, total = 0;
+        for (var y = -radius; y <= radius; y++) {
+          for (var x = -radius; x <= radius; x++) {
+            if (x*x + y*y > radius*radius) continue;
+            final pxX = cx + ox + x, pxY = cy + oy + y;
+            if (pxX < 0 || pxY < 0 || pxX >= image.width || pxY >= image.height) continue;
+            final px = image.getPixel(pxX, pxY);
+            final gray = 0.299 * px.r + 0.587 * px.g + 0.114 * px.b;
+            if (gray < 130) dark++;
+            total++;
+          }
+        }
+        if (total > 0) {
+          final ratio = dark / total;
+          if (ratio > bestRatio) bestRatio = ratio;
+        }
       }
     }
-    return total == 0 ? 0 : dark / total;
-  }
-}
+    return bestRatio;
+  }}
