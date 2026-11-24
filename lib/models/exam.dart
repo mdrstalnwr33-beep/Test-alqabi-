@@ -3,21 +3,54 @@ import 'dart:math';
 class ExamVariant {
   ExamVariant({required this.code, required this.questionOrder, required this.optionOrder, this.seed = 0});
   final String code;
+  /// Original question indexes in the order printed on this variant.
   final List<int> questionOrder;
+  /// For each original question, maps displayed option index to original option index.
   final List<List<int>> optionOrder;
+  final int seed;
+
+  int? originalQuestionForDisplayed(int displayedQuestion) {
+    if (displayedQuestion < 0 || displayedQuestion >= questionOrder.length) return null;
+    return questionOrder[displayedQuestion];
+  }
+
+  int? originalOptionForDisplayed(int displayedQuestion, int displayedOption) {
+    final originalQuestion = originalQuestionForDisplayed(displayedQuestion);
+    if (originalQuestion == null || originalQuestion < 0 || originalQuestion >= optionOrder.length) return null;
+    final order = optionOrder[originalQuestion];
+    if (displayedOption < 0 || displayedOption >= order.length) return null;
+    return order[displayedOption];
+  }
 
   int? getDisplayedAnswer(int displayedQuestion, List<int?> originalAnswerKey) {
-    if (displayedQuestion < 0 || displayedQuestion >= questionOrder.length) return null;
-    final originalQuestion = questionOrder[displayedQuestion];
-    if (originalQuestion < 0 || originalQuestion >= originalAnswerKey.length || originalQuestion >= optionOrder.length) return null;
+    final originalQuestion = originalQuestionForDisplayed(displayedQuestion);
+    if (originalQuestion == null || originalQuestion < 0 || originalQuestion >= originalAnswerKey.length) return null;
     final correct = originalAnswerKey[originalQuestion];
-    if (correct == null) return null;
+    if (correct == null || originalQuestion >= optionOrder.length) return null;
     final index = optionOrder[originalQuestion].indexOf(correct);
     return index < 0 ? null : index;
   }
 
-  Map<String, dynamic> toJson() => {'code': code, 'questionOrder': questionOrder, 'optionOrder': optionOrder, 'seed': seed};
-  final int seed;
+  /// Converts answers read in the printed variant order back to the source exam order.
+  List<int?> mapDisplayedAnswersToOriginal(List<int?> displayedAnswers) {
+    if (displayedAnswers.length != questionOrder.length) {
+      throw ArgumentError('عدد الإجابات لا يطابق عدد أسئلة النموذج.');
+    }
+    final original = List<int?>.filled(questionOrder.length, null);
+    for (var displayedQ = 0; displayedQ < displayedAnswers.length; displayedQ++) {
+      final originalQ = originalQuestionForDisplayed(displayedQ)!;
+      final displayedOption = displayedAnswers[displayedQ];
+      original[originalQ] = displayedOption == null
+          ? null
+          : originalOptionForDisplayed(displayedQ, displayedOption);
+    }
+    return original;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'code': code, 'questionOrder': questionOrder, 'optionOrder': optionOrder, 'seed': seed,
+  };
+
   factory ExamVariant.fromJson(Map<String, dynamic> json) => ExamVariant(
     code: json['code'] as String,
     questionOrder: (json['questionOrder'] as List).map((v) => v as int).toList(),
@@ -27,16 +60,35 @@ class ExamVariant {
 }
 
 class ExamVariantFactory {
-  static List<ExamVariant> generate({required String examId, required List<String> questionTypes, required int optionCount, int count = 30, int seed = 20261125}) {
+  static List<ExamVariant> generate({
+    required String examId,
+    required List<String> questionTypes,
+    required int optionCount,
+    int count = 30,
+    int seed = 20261125,
+  }) {
     if (count < 1 || count > 100) throw ArgumentError.value(count, 'count', 'يجب أن يكون بين 1 و100');
-    if (questionTypes.isEmpty || optionCount < 2 || optionCount > 5) throw ArgumentError('بيانات الاختبار غير صالحة لإنشاء النماذج.');
+    if (questionTypes.isEmpty || optionCount < 2 || optionCount > 5 ||
+        questionTypes.any((type) => type != 'tf' && type != 'mcq')) {
+      throw ArgumentError('بيانات الاختبار غير صالحة لإنشاء النماذج.');
+    }
+
     final variants = <ExamVariant>[];
     final signatures = <String>{};
+    final trueFalseQuestions = <int>[
+      for (var i = 0; i < questionTypes.length; i++) if (questionTypes[i] == 'tf') i,
+    ];
+    final multipleChoiceQuestions = <int>[
+      for (var i = 0; i < questionTypes.length; i++) if (questionTypes[i] == 'mcq') i,
+    ];
     var attempt = 0;
     while (variants.length < count && attempt < count * 100) {
       final variantSeed = seed + attempt;
       final random = Random(variantSeed);
-      final questionOrder = List<int>.generate(questionTypes.length, (i) => i)..shuffle(random);
+      final tfOrder = List<int>.from(trueFalseQuestions)..shuffle(random);
+      final mcqOrder = List<int>.from(multipleChoiceQuestions)..shuffle(random);
+      // Keep the printed sheet's required section order: true/false first, then MCQ.
+      final questionOrder = [...tfOrder, ...mcqOrder];
       final optionOrder = List<List<int>>.generate(questionTypes.length, (q) {
         final n = questionTypes[q] == 'tf' ? 2 : optionCount;
         return List<int>.generate(n, (i) => i)..shuffle(random);
@@ -46,10 +98,19 @@ class ExamVariantFactory {
       if (!signatures.add(signature)) continue;
       final suffix = (variants.length + 1).toString().padLeft(2, '0');
       final cleanId = examId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
-      final prefix = cleanId.length >= 4 ? cleanId.substring(cleanId.length - 4).toUpperCase() : cleanId.toUpperCase().padLeft(4, '0');
-      variants.add(ExamVariant(code: 'Q$prefix-$suffix', questionOrder: questionOrder, optionOrder: optionOrder, seed: variantSeed));
+      final prefix = cleanId.length >= 4
+          ? cleanId.substring(cleanId.length - 4).toUpperCase()
+          : cleanId.toUpperCase().padLeft(4, '0');
+      variants.add(ExamVariant(
+        code: 'Q$prefix-$suffix',
+        questionOrder: questionOrder,
+        optionOrder: optionOrder,
+        seed: variantSeed,
+      ));
     }
-    if (variants.length != count) throw StateError('تعذر إنشاء العدد المطلوب من النماذج المختلفة.');
+    if (variants.length != count) {
+      throw StateError('تعذر إنشاء العدد المطلوب من النماذج المختلفة. جرّب عدداً أقل.');
+    }
     return variants;
   }
 }
