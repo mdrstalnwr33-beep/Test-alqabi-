@@ -106,7 +106,9 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('٣- لا تضع علامة صح؛ ظلّل الدائرة بالكامل.', arabic, 9),
         pw.SizedBox(height: 4),
-        _rtl('٤- لا تثنِ الورقة أو تكتب داخل دوائر الإجابة.', arabic, 9),
+        _rtl('٤- اكتب اسمك ورقم جلوسك بخط واضح في الخانتين.', arabic, 9),
+        pw.SizedBox(height: 4),
+        _rtl('٥- لا تثنِ الورقة أو تكتب داخل دوائر الإجابة.', arabic, 9),
       ]),
     );
     doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: pw.EdgeInsets.zero, build: (_) => pw.Stack(children: [
