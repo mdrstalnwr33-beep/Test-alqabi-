@@ -121,10 +121,15 @@ class OmrScannerService {
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
     Future<String> recognize({required int top, required String fileName}) async {
-      const left = 606, width = 528, height = 44;
+      // The warped page is rendered at 2x PDF coordinates. The name and
+      // seat-number lines are in the lower part of the right-hand header,
+      // not near the top of the warped image.
+      const left = 606, width = 528, height = 48;
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
-      final enlarged = imglib.copyResize(crop, width: width * 3, height: height * 3,
+      final cleaned = imglib.grayscale(crop);
+      imglib.contrast(cleaned, contrast: 125);
+      final enlarged = imglib.copyResize(cleaned, width: width * 4, height: height * 4,
           interpolation: imglib.Interpolation.cubic);
       final dir = await Directory.systemTemp.createTemp('alqadi_identity_');
       final file = File('${dir.path}/$fileName.png');
@@ -140,8 +145,8 @@ class OmrScannerService {
       }
     }
     try {
-      final rawName = await recognize(top: 300, fileName: 'student_name');
-      final rawSeat = await recognize(top: 338, fileName: 'seat_number');
+      final rawName = await recognize(top: 674, fileName: 'student_name');
+      final rawSeat = await recognize(top: 704, fileName: 'seat_number');
       final name = rawName
           .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
           .replaceAll(RegExp(r'\s+'), ' ').trim();
