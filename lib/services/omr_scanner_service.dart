@@ -68,11 +68,13 @@ class OmrScannerService {
     if (candidates.length < 4) {
       throw StateError('لم أتمكن من اكتشاف المربعات السوداء الأربعة. صوّر الورقة كاملة بإضاءة جيدة ومن دون قص الأطراف.');
     }
+    // The generated sheet uses four fixed markers close to the physical
+    // page corners. These normalized coordinates match the PDF marker centers.
     final targets = <ScanPoint>[
-      ScanPoint(w * 0.037, h * 0.226),
-      ScanPoint(w * 0.924, h * 0.226),
-      ScanPoint(w * 0.924, h * 0.960),
-      ScanPoint(w * 0.037, h * 0.960),
+      ScanPoint(w * 22 / 595, h * 24 / 842),
+      ScanPoint(w * 573 / 595, h * 24 / 842),
+      ScanPoint(w * 573 / 595, h * 803 / 842),
+      ScanPoint(w * 22 / 595, h * 803 / 842),
     ];
     final selected = <ScanPoint>[];
     final used = <int>{};
@@ -81,6 +83,15 @@ class OmrScannerService {
       for (var i = 0; i < candidates.length; i++) {
         if (used.contains(i)) continue;
         final p = candidates[i];
+        // Keep each marker in its own page-corner zone so a dark bubble,
+        // logo detail, or text cannot be mistaken for a missing corner.
+        final inExpectedCorner = switch (selected.length) {
+          0 => p.x < w * 0.25 && p.y < h * 0.22,
+          1 => p.x > w * 0.75 && p.y < h * 0.22,
+          2 => p.x > w * 0.75 && p.y > h * 0.78,
+          _ => p.x < w * 0.25 && p.y > h * 0.78,
+        };
+        if (!inExpectedCorner) continue;
         final dx = (p.x - target.x) / w, dy = (p.y - target.y) / h;
         final score = dx * dx + dy * dy;
         if (score < bestScore) { bestScore = score; best = i; }
@@ -161,11 +172,12 @@ class OmrScannerService {
   }
 
   imglib.Image _warp(imglib.Image source, List<ScanPoint> corners) {
+    // Warp back to the exact centers of the four markers printed on the PDF.
     final dst = <ScanPoint>[
-      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 197 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 197 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(557 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
-      ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 815 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 24 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(573 / OmrSheetService.pageWidth * outputWidth, 24 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(573 / OmrSheetService.pageWidth * outputWidth, 803 / OmrSheetService.pageHeight * outputHeight),
+      ScanPoint(22 / OmrSheetService.pageWidth * outputWidth, 803 / OmrSheetService.pageHeight * outputHeight),
     ];
     final h = _homography(dst, corners);
     final out = imglib.Image(width: outputWidth, height: outputHeight, numChannels: 3);
