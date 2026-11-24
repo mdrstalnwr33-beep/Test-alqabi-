@@ -1,12 +1,16 @@
 import 'dart:typed_data';
+import 'dart:io';
+import 'package:tesseract_ocr/tesseract_ocr.dart';
+import 'package:tesseract_ocr/ocr_engine_config.dart';
 import 'package:image/image.dart' as imglib;
 import '../models/exam.dart';
 import 'omr_sheet_service.dart';
 class ScanPoint { const ScanPoint(this.x, this.y); final double x, y; }
 class OmrReadout {
-  const OmrReadout({required this.answers, required this.ambiguousQuestions, required this.blankQuestions});
+  const OmrReadout({required this.answers, required this.ambiguousQuestions, required this.blankQuestions, this.studentName = '', this.seatNumber = ''});
   final List<int?> answers;
   final List<int> ambiguousQuestions, blankQuestions;
+  final String studentName, seatNumber;
 }
 class OmrScannerService {
   static const outputWidth = 1190, outputHeight = 1684;
@@ -98,6 +102,7 @@ class OmrScannerService {
     if (detectedCorners.length != 4) throw ArgumentError('تعذر تحديد زوايا الورقة تلقائياً.');
     _validateCorners(detectedCorners, source.width, source.height);
     final warped = _warp(source, detectedCorners);
+    final identity = await _readStudentIdentity(warped);
     final answers = <int?>[], ambiguous = <int>[], blanks = <int>[];
     for (var q = 0; q < exam.questionCount; q++) {
       final scores = <double>[];
@@ -111,8 +116,45 @@ class OmrScannerService {
       else if (best < 0.48 || best - second < 0.14) { answers.add(null); ambiguous.add(OmrSheetService.visualQuestionNumber(exam, q)); }
       else { answers.add(ranked.first); }
     }
-    return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks);
+    return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks, studentName: identity.$1, seatNumber: identity.$2);
   }
+
+  Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
+    Future<String> recognize({required int top, required String fileName}) async {
+      const left = 606, width = 528, height = 44;
+      final safeTop = top.clamp(0, warped.height - height).toInt();
+      final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
+      final enlarged = imglib.copyResize(crop, width: width * 3, height: height * 3,
+          interpolation: imglib.Interpolation.cubic);
+      final dir = await Directory.systemTemp.createTemp('alqadi_identity_');
+      final file = File('${dir.path}/$fileName.png');
+      try {
+        await file.writeAsBytes(imglib.encodePng(enlarged), flush: true);
+        return await TesseractOcr.extractText(file.path, config: OCRConfig(
+          language: 'ara+eng',
+          engine: OCREngine.tesseract,
+          options: {'tessedit_pageseg_mode': '7', 'preserve_interword_spaces': '1'},
+        ));
+      } finally {
+        if (await dir.exists()) await dir.delete(recursive: true);
+      }
+    }
+    try {
+      final rawName = await recognize(top: 300, fileName: 'student_name');
+      final rawSeat = await recognize(top: 338, fileName: 'seat_number');
+      final name = rawName
+          .replaceAll(RegExp(r'اسم\\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
+          .replaceAll(RegExp(r'\\s+'), ' ').trim();
+      final digits = rawSeat.replaceAll('٠','0').replaceAll('١','1')
+          .replaceAll('٢','2').replaceAll('٣','3').replaceAll('٤','4')
+          .replaceAll('٥','5').replaceAll('٦','6').replaceAll('٧','7')
+          .replaceAll('٨','8').replaceAll('٩','9');
+      return (name, RegExp(r'\\d+').firstMatch(digits)?.group(0) ?? '');
+    } catch (_) {
+      return ('', '');
+    }
+  }
+
   imglib.Image _warp(imglib.Image source, List<ScanPoint> corners) {
     final dst = <ScanPoint>[
       ScanPoint(29 / OmrSheetService.pageWidth * outputWidth, 197 / OmrSheetService.pageHeight * outputHeight),
