@@ -33,7 +33,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> choose(ImageSource source) async {
     try {
       final picked = await picker.pickImage(source: source, imageQuality: 95, maxWidth: 2400);
-      if (picked != null && mounted) setState(() { image = picked; corners = []; stageMessage = 'حدد مراكز المربعات السوداء الأربعة بالترتيب: أعلى اليسار، أعلى اليمين، أسفل اليمين، أسفل اليسار.'; });
+      if (picked != null && mounted) setState(() { image = picked; corners = []; stageMessage = 'سيكتشف التطبيق زوايا الورقة تلقائياً عند بدء التحليل. تأكد من ظهور الورقة كاملة.'; });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر فتح الصورة: ' + e.toString())));
     }
@@ -42,14 +42,14 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> scanNow() async {
     final exam = selectedExam;
     final photo = image;
-    if (exam == null || photo == null || corners.length != 4) return;
+    if (exam == null || photo == null) return;
     if (!exam.hasAnswerKey) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل مفتاح الإجابة أولاً من صفحة الاختبار.')));
       return;
     }
     setState(() => busy = true);
     try {
-      final readout = await scanner.scan(imageBytes: await photo.readAsBytes(), corners: corners, exam: exam);
+      final readout = await scanner.scan(imageBytes: await photo.readAsBytes(), exam: exam);
       if (!mounted) return;
       final nameController = TextEditingController();
       final nameOk = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
@@ -97,7 +97,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     const Text('تصحيح ورقة OMR', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
     const SizedBox(height: 8),
-    const Text('اطبع نموذج الإجابة من الاختبار نفسه. أثناء التصوير التقط الورقة كاملة من أعلى، ثم المس مراكز المربعات السوداء الأربعة لتصحيح الميل والمنظور.', style: TextStyle(color: Colors.black54, height: 1.5)),
+    const Text('اطبع نموذج الإجابة من الاختبار نفسه. أثناء التصوير التقط الورقة كاملة من أعلى، وسيتعرف التطبيق تلقائياً على المربعات السوداء الأربع لتصحيح الميل والمنظور.', style: TextStyle(color: Colors.black54, height: 1.5)),
     const SizedBox(height: 16),
     DropdownButtonFormField<Exam>(
       value: selectedExam != null && widget.exams.any((e) => e.id == selectedExam!.id) ? widget.exams.firstWhere((e) => e.id == selectedExam!.id) : null,
@@ -112,16 +112,16 @@ class _ScanScreenState extends State<ScanScreen> {
       Expanded(child: OutlinedButton.icon(onPressed: () => choose(ImageSource.gallery), icon: const Icon(Icons.photo_library), label: const Text('المعرض'))),
     ]),
     const SizedBox(height: 12),
-    if (image != null) _cornerPicker() else Container(height: 190, alignment: Alignment.center, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.document_scanner_outlined, size: 54, color: Color(0xFF12A89D)), Text('لم يتم اختيار صورة') ])),
+    if (image != null) _imagePreview() else Container(height: 190, alignment: Alignment.center, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.document_scanner_outlined, size: 54, color: Color(0xFF12A89D)), Text('لم يتم اختيار صورة') ])),
     const SizedBox(height: 10),
     Text(stageMessage, style: const TextStyle(color: Colors.black54)),
-    if (image != null) Text('الزوايا المحددة: ' + corners.length.toString() + ' / 4', style: const TextStyle(fontWeight: FontWeight.bold)),
+    
     const SizedBox(height: 12),
-    FilledButton.icon(onPressed: busy || corners.length != 4 || selectedExam == null ? null : scanNow, icon: const Icon(Icons.fact_check_outlined), label: Text(busy ? 'جارٍ تحليل الورقة...' : 'تحليل الورقة وتصحيحها')),
+    FilledButton.icon(onPressed: busy || selectedExam == null || image == null ? null : scanNow, icon: const Icon(Icons.fact_check_outlined), label: Text(busy ? 'جارٍ تحليل الورقة...' : 'تحليل الورقة وتصحيحها')),
     if (busy) const Padding(padding: EdgeInsets.all(14), child: Center(child: CircularProgressIndicator())),
   ]);
 
-  Widget _cornerPicker() => SizedBox(height: 410, child: LayoutBuilder(builder: (context, constraints) {
+  Widget _imagePreview() => SizedBox(height: 410, child: LayoutBuilder(builder: (context, constraints) {
     final file = File(image!.path);
     return FutureBuilder<imglib.Image>(
       future: _loadPreview(file),
@@ -132,19 +132,10 @@ class _ScanScreenState extends State<ScanScreen> {
         final scale = _fitScale(img.width.toDouble(), img.height.toDouble(), constraints.maxWidth, constraints.maxHeight);
         final drawnW = img.width * scale, drawnH = img.height * scale;
         final offsetX = (constraints.maxWidth - drawnW) / 2, offsetY = (constraints.maxHeight - drawnH) / 2;
-        return GestureDetector(
-          onTapDown: (details) {
-            final dx = details.localPosition.dx - offsetX, dy = details.localPosition.dy - offsetY;
-            if (dx < 0 || dy < 0 || dx > drawnW || dy > drawnH || corners.length >= 4) return;
-            setState(() => corners.add(ScanPoint(dx / scale, dy / scale)));
-          },
-          child: Stack(alignment: Alignment.center, children: [
+        return Stack(alignment: Alignment.center, children: [
             Image.file(file, fit: BoxFit.contain, width: constraints.maxWidth, height: constraints.maxHeight),
-            CustomPaint(size: Size(constraints.maxWidth, constraints.maxHeight), painter: _CornerPainter(corners, scale, offsetX, offsetY)),
-            Positioned(top: 8, right: 8, child: DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(.65), borderRadius: BorderRadius.circular(8)), child: Padding(padding: const EdgeInsets.all(7), child: Text('انقر الزاوية ${corners.length + 1}/4', style: const TextStyle(color: Colors.white))))),
-            Positioned(bottom: 8, left: 8, child: TextButton.icon(onPressed: () => setState(() => corners.clear()), icon: const Icon(Icons.refresh), label: const Text('إعادة تحديد'))),
+            Positioned(top: 8, right: 8, child: DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(.65), borderRadius: BorderRadius.circular(8)), child: const Padding(padding: EdgeInsets.all(7), child: Text('اكتشاف تلقائي للزوايا', style: TextStyle(color: Colors.white))))),
           ]),
-        );
       },
     );
   }));
