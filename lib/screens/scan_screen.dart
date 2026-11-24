@@ -69,8 +69,9 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final studentName = nameController.text.trim();
       nameController.dispose();
-      final reviewed = await Navigator.push<List<int?>>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout)));
-      if (reviewed == null || !mounted) return;
+      final review = await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout, initialStudentName: studentName)));
+      if (review == null || !mounted) return;
+      final reviewed = review.answers;
       var correct = 0, incorrect = 0, unanswered = 0;
       for (var i = 0; i < reviewed.length; i++) {
         final answer = reviewed[i];
@@ -80,7 +81,7 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
-        studentName: studentName,
+        studentName: review.studentName,
         responses: reviewed, correct: correct, incorrect: incorrect, unanswered: unanswered,
         ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
       );
@@ -176,21 +177,32 @@ class _CornerPainter extends CustomPainter {
   bool shouldRepaint(covariant _CornerPainter oldDelegate) => true;
 }
 
+class _ReviewSubmission {
+  const _ReviewSubmission({required this.answers, required this.studentName});
+  final List<int?> answers;
+  final String studentName;
+}
+
 class _ReviewAnswersScreen extends StatefulWidget {
-  const _ReviewAnswersScreen({required this.exam, required this.readout});
+  const _ReviewAnswersScreen({required this.exam, required this.readout, required this.initialStudentName});
   final Exam exam;
   final OmrReadout readout;
+  final String initialStudentName;
   @override
   State<_ReviewAnswersScreen> createState() => _ReviewAnswersScreenState();
 }
 class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
   late List<int?> answers;
+  late final TextEditingController studentNameController;
   @override
-  void initState() { super.initState(); answers = List<int?>.from(widget.readout.answers); }
+  void initState() { super.initState(); answers = List<int?>.from(widget.readout.answers); studentNameController = TextEditingController(text: widget.initialStudentName); }
+  @override
+  void dispose() { studentNameController.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('مراجعة الإجابات')),
     body: Column(children: [
+      Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), child: TextField(controller: studentNameController, textDirection: TextDirection.rtl, decoration: const InputDecoration(labelText: 'اسم الطالب', prefixIcon: Icon(Icons.person_outline), border: OutlineInputBorder()))),
       Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
       Expanded(
         child: ListView.builder(
@@ -222,7 +234,14 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
           child: SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.pop(context, answers),
+              onPressed: () {
+                final name = studentNameController.text.trim();
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل اسم الطالب قبل حفظ النتيجة.')));
+                  return;
+                }
+                Navigator.pop(context, _ReviewSubmission(answers: List<int?>.from(answers), studentName: name));
+              },
               child: const Text('اعتماد التصحيح وحفظ النتيجة'),
             ),
           ),
