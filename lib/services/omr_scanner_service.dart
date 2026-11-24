@@ -104,7 +104,9 @@ class OmrScannerService {
     return List<double>.generate(8, (i) => m[i][8]);
   }
   double _darkRatio(imglib.Image image, int cx, int cy) {
-    const radius = 6;
+    // A slightly wider center sample tolerates small camera/registration offsets
+    // while remaining inside the filled core of the printed answer bubble.
+    const radius = 9;
     var dark = 0, total = 0;
     for (var y = -radius; y <= radius; y++) {
       for (var x = -radius; x <= radius; x++) {
