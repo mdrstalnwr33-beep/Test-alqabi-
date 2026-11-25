@@ -24,6 +24,42 @@ jobs:
           cache: true
       - name: Generate Android platform files
         run: flutter create --platforms=android --org com.alqadi --project-name alqadi_smart_exam_checker --no-pub .
+      - name: Configure persistent Android release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret: $name. Configure the permanent Android signing key before building an installable update."
+              exit 1
+            fi
+          done
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release-upload.jks
+          test -s android/app/release-upload.jks
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          if 'create("release")' not in s:
+              s = s.replace("android {", """android {
+              signingConfigs {
+                  create("release") {
+                      storeFile = file("release-upload.jks")
+                      storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }""", 1)
+          s = s.replace('signingConfig = signingConfigs.getByName("debug")',
+                        'signingConfig = signingConfigs.getByName("release")')
+          p.write_text(s)
+          if 'signingConfig = signingConfigs.getByName("release")' not in s:
+              raise SystemExit("Release signing configuration was not applied.")
+          PY
       - name: Configure Android plugin repositories
         run: |
           python3 - <<'PY'
