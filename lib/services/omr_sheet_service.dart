@@ -53,7 +53,17 @@ class OmrSheetService {
         (_top + row * pitch) / pageHeight);
   }
 
-  static Future<Uint8List> buildPdf(Exam exam) async {
+  static Future<Uint8List> buildPdf(Exam exam, {ExamVariant? variant, String studentName = '', String seatNumber = ''}) async {
+    final layoutExam = variant == null ? exam : Exam(
+      id: exam.id, title: exam.title, subject: exam.subject,
+      questionCount: exam.questionCount, optionCount: exam.optionCount,
+      answerKey: exam.answerKey,
+      questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
+      schoolName: exam.schoolName, teacherName: exam.teacherName,
+    );
+    if (variant != null && (variant.questionOrder.length != exam.questionCount || variant.optionOrder.length != exam.questionCount)) {
+      throw ArgumentError('خريطة النموذج غير متوافقة مع الاختبار.');
+    }
     final doc = pw.Document();
     late final pw.Font arabic;
     try {
@@ -85,9 +95,9 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('المعلم: ${exam.teacherName.isEmpty ? '______________' : exam.teacherName}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('اسم الطالب: ____________________', arabic, 10),
+        _rtl('اسم الطالب: ${studentName.isEmpty ? '____________________' : studentName}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('رقم الجلوس: __________', arabic, 10),
+        _rtl('رقم الجلوس: ${seatNumber.isEmpty ? '__________' : seatNumber}', arabic, 10),
       ]),
     );
     // Student instructions are printed in a matching panel on the left.
@@ -125,8 +135,12 @@ class OmrSheetService {
         'حل فقرات الصح والخطأ', true, arabic)),
       // Fixed calibration markers: same four page-corner positions as the printed reference form.
       _marker(15, 17), _marker(566, 17), _marker(566, 796), _marker(15, 796),
-      ..._questionWidgets(exam, arabic),
-      pw.Positioned(left: 28, top: 820, child: pw.Text('FORM ${exam.id.substring(exam.id.length > 6 ? exam.id.length - 6 : 0)}', style: const pw.TextStyle(fontSize: 7))),
+      ..._questionWidgets(layoutExam, arabic),
+      pw.Positioned(left: 28, top: 816, child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.black, width: 1)),
+        child: pw.Text('CODE: ${variant?.code ?? 'BASE'}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+      )),
     ])));
     return doc.save();
   }
