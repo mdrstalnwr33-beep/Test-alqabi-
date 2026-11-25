@@ -115,9 +115,21 @@ class ExamVariantFactory {
   }
 }
 
+class ExamQuestion {
+  ExamQuestion({required this.text, List<String>? options})
+      : options = options ?? <String>[];
+  final String text;
+  final List<String> options;
+  Map<String, dynamic> toJson() => {'text': text, 'options': options};
+  factory ExamQuestion.fromJson(Map<String, dynamic> json) => ExamQuestion(
+    text: (json['text'] ?? '') as String,
+    options: (json['options'] as List?)?.map((v) => v.toString()).toList() ?? const <String>[],
+  );
+}
+
 class Exam {
-  Exam({required this.id, required this.title, required this.subject, required this.questionCount, required this.optionCount, required this.answerKey, this.createdAt, List<String>? questionTypes, this.schoolName = '', this.teacherName = '', this.termName = '', List<ExamVariant>? variants})
-      : questionTypes = questionTypes ?? List<String>.filled(questionCount, 'mcq'), variants = variants ?? [];
+  Exam({required this.id, required this.title, required this.subject, required this.questionCount, required this.optionCount, required this.answerKey, this.createdAt, List<String>? questionTypes, this.schoolName = '', this.teacherName = '', this.termName = '', List<ExamVariant>? variants, List<ExamQuestion>? questions})
+      : questionTypes = questionTypes ?? List<String>.filled(questionCount, 'mcq'), variants = variants ?? [], questions = questions ?? [];
   final String id, title, subject;
   final int questionCount, optionCount;
   final List<int?> answerKey;
@@ -125,12 +137,14 @@ class Exam {
   final List<String> questionTypes;
   final String schoolName, teacherName, termName;
   final List<ExamVariant> variants;
+  final List<ExamQuestion> questions;
   int optionsFor(int index) => index < questionTypes.length && questionTypes[index] == 'tf' ? 2 : optionCount;
   bool get hasAnswerKey => answerKey.length == questionCount && answerKey.every((v) => v != null);
   Map<String, dynamic> toJson() => {
     'id': id, 'title': title, 'subject': subject, 'questionCount': questionCount, 'optionCount': optionCount,
     'answerKey': answerKey, 'questionTypes': questionTypes, 'schoolName': schoolName, 'teacherName': teacherName,
     'termName': termName, 'variants': variants.map((v) => v.toJson()).toList(),
+    'questions': questions.map((q) => q.toJson()).toList(),
     'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
   };
   factory Exam.fromJson(Map<String, dynamic> json) {
@@ -144,6 +158,7 @@ class Exam {
       schoolName: (json['schoolName'] ?? '') as String, teacherName: (json['teacherName'] ?? '') as String,
       termName: (json['termName'] ?? '') as String,
       variants: (json['variants'] as List?)?.map((v) => ExamVariant.fromJson(Map<String, dynamic>.from(v as Map))).toList(),
+      questions: (json['questions'] as List?)?.map((v) => ExamQuestion.fromJson(Map<String, dynamic>.from(v as Map))).toList(),
     );
   }
 }
