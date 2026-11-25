@@ -1,7 +1,7 @@
 name: alqadi_smart_exam_checker
 description: Arabic-first offline OMR exam grading app.
 publish_to: 'none'
-version: 0.1.0+185
+version: 0.1.0+186
 environment:
   sdk: '>=3.3.0 <4.0.0'
 dependencies:
