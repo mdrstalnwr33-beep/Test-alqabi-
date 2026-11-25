@@ -166,7 +166,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       schoolName: school.text.trim(), teacherName: teacher.text.trim(),
       // Keep generated forms when only metadata or answer-key values change.
       // A changed question layout invalidates their mappings, so discard them.
-      variants: sameQuestionLayout ? variants : const [],
+      variants: List<ExamVariant>.from(variants),
     );
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
@@ -346,6 +346,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                         ],
                         onChanged: (v) => setState(() {
                           questionTypes[i] = v!;
+                          variants.clear();
                           if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) {
                             answers[i] = null;
                           }
