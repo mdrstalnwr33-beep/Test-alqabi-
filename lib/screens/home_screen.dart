@@ -234,6 +234,48 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     }
   }
 
+  Future<void> _showVariantKeys() async {
+    if (variants.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أنشئ النماذج أولاً لعرض مفاتيحها.')),
+      );
+      return;
+    }
+    final report = variants.map((variant) {
+      final key = variant.getAnswerKey(answers);
+      final rows = <String>[];
+      for (var displayedQ = 0; displayedQ < key.length; displayedQ++) {
+        final originalQ = variant.questionOrder[displayedQ];
+        final answer = key[displayedQ];
+        final label = answer == null
+            ? '—'
+            : questionTypes[originalQ] == 'tf'
+                ? (answer == 0 ? 'صح' : 'خطأ')
+                : String.fromCharCode(65 + answer);
+        rows.add('${displayedQ + 1}: $label');
+      }
+      return '${variant.code}\n${rows.join('   ')}';
+    }).join('\n\n');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('مفاتيح الإجابة لكل نموذج'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: SelectableText(report, textDirection: TextDirection.rtl),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _printNamedVariant() async {
     if (variants.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أنشئ النماذج أولاً قبل توزيعها على الطلاب.')));
@@ -410,6 +452,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
           OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.print), label: const Text('طباعة الورقة')),
           OutlinedButton.icon(onPressed: _generateVariants, icon: const Icon(Icons.copy_all), label: const Text('إنشاء نماذج متعددة')),
+          OutlinedButton.icon(onPressed: _showVariantKeys, icon: const Icon(Icons.key), label: const Text('مفاتيح النماذج')),
           OutlinedButton.icon(onPressed: _printNamedVariant, icon: const Icon(Icons.person_add_alt_1), label: const Text('ورقة طالب باسمه')),
         ]),
         if (variants.isNotEmpty) ...[
