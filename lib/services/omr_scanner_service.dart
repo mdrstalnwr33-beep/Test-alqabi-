@@ -248,43 +248,64 @@ class OmrScannerService {
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
     Future<String> recognize({required int top, required String fileName}) async {
-      // The warped page is rendered at 2x PDF coordinates. The name and
-      // seat-number lines are in the lower part of the right-hand header,
-      // not near the top of the warped image.
+      // The printed identity rows are in the right-hand header. Keep each
+      // crop isolated to one row, then try more than one Tesseract page mode.
       const left = 606, width = 528, height = 48;
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
-      final cleaned = imglib.grayscale(crop);
-      imglib.contrast(cleaned, contrast: 125);
-      final enlarged = imglib.copyResize(cleaned, width: width * 4, height: height * 4,
+      final gray = imglib.grayscale(crop);
+      imglib.contrast(gray, contrast: 155);
+      final enlarged = imglib.copyResize(gray, width: width * 5, height: height * 5,
           interpolation: imglib.Interpolation.cubic);
+      final binary = imglib.Image(width: enlarged.width, height: enlarged.height, numChannels: 3);
+      for (var y = 0; y < enlarged.height; y++) {
+        for (var x = 0; x < enlarged.width; x++) {
+          final pixel = enlarged.getPixel(x, y);
+          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 185 ? 0 : 255;
+          binary.setPixelRgb(x, y, value, value, value);
+        }
+      }
       final dir = await Directory.systemTemp.createTemp('alqadi_identity_');
       final file = File('${dir.path}/$fileName.png');
       try {
-        await file.writeAsBytes(imglib.encodePng(enlarged), flush: true);
-        return await TesseractOcr.extractText(file.path, config: OCRConfig(
-          language: 'ara+eng',
-          engine: OCREngine.tesseract,
-          options: {'tessedit_pageseg_mode': '7', 'preserve_interword_spaces': '1'},
-        ));
+        final candidates = <String>[];
+        for (final image in [enlarged, binary]) {
+          await file.writeAsBytes(imglib.encodePng(image), flush: true);
+          for (final pageMode in ['7', '6']) {
+            final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
+              language: 'ara+eng',
+              engine: OCREngine.tesseract,
+              options: {'tessedit_pageseg_mode': pageMode, 'preserve_interword_spaces': '1'},
+            ));
+            candidates.add(raw.trim());
+          }
+        }
+        int arabicCount(String value) =>
+            RegExp(r'[\\u0600-\\u06FF]').allMatches(value).length;
+        candidates.sort((a, b) => arabicCount(b).compareTo(arabicCount(a)));
+        return candidates.isEmpty ? '' : candidates.first;
       } finally {
         if (await dir.exists()) await dir.delete(recursive: true);
       }
     }
+
     try {
-      // The identity fields are inside the header near the top of the page.
-      // The previous 674/704px crops were far below the header and therefore
-      // read blank paper instead of the printed student name and seat number.
       final rawName = await recognize(top: 304, fileName: 'student_name');
       final rawSeat = await recognize(top: 336, fileName: 'seat_number');
       final name = rawName
-          .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
-          .replaceAll(RegExp(r'\s+'), ' ').trim();
+          .replaceAll(RegExp(r'اسم\\s*الطالب|اسم الطالب|الطالب'), ' ')
+          .replaceAll(RegExp(r'[^\\u0600-\\u06FF\\s]'), ' ')
+          .replaceAll(RegExp(r'\\s+'), ' ')
+          .trim();
+      final arabicLetters = RegExp(r'[\\u0621-\\u064A]').allMatches(name).length;
       final digits = rawSeat.replaceAll('٠','0').replaceAll('١','1')
           .replaceAll('٢','2').replaceAll('٣','3').replaceAll('٤','4')
           .replaceAll('٥','5').replaceAll('٦','6').replaceAll('٧','7')
           .replaceAll('٨','8').replaceAll('٩','9');
-      return (name, RegExp(r'\d+').firstMatch(digits)?.group(0) ?? '');
+      // Do not save a handful of OCR look-alike characters as a student's
+      // name. Leave it blank for manual confirmation in the review screen.
+      return (arabicLetters >= 3 ? name : '',
+          RegExp(r'\\d+').firstMatch(digits)?.group(0) ?? '');
     } catch (_) {
       return ('', '');
     }
