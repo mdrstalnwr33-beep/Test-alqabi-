@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/exam.dart';
 import '../services/app_store.dart';
 import '../services/omr_sheet_service.dart';
+import '../services/exam_paper_service.dart';
 import '../services/report_service.dart';
 import 'scan_screen.dart';
 
@@ -304,24 +305,44 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
     namesController.dispose();
     try {
+      if (questions.length != widget.exam.questionCount ||
+          questions.any((q) => q.text.trim().isEmpty)) {
+        throw StateError('أدخل نص جميع الأسئلة أولاً من زر «إضافة نص السؤال والخيارات».');
+      }
+      for (var q = 0; q < questions.length; q++) {
+        final requiredOptions = questionTypes[q] == 'tf' ? 2 : widget.exam.optionCount;
+        if (questions[q].options.length != requiredOptions ||
+            questions[q].options.any((v) => v.trim().isEmpty)) {
+          throw StateError('أكمل خيارات السؤال ${q + 1} أولاً.');
+        }
+      }
       final directory = await getTemporaryDirectory();
       final files = <XFile>[];
+      final currentExam = Exam(
+        id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+        questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
+        answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes),
+        questions: List<ExamQuestion>.from(questions),
+        schoolName: school.text.trim(), teacherName: teacher.text.trim(),
+      );
       for (var i = 0; i < names.length; i++) {
         final variant = variants[i % variants.length];
-        final bytes = await OmrSheetService.buildPdf(
-          Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
-            questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
-            answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes), questions: List<ExamQuestion>.from(questions),
-            schoolName: school.text.trim(), teacherName: teacher.text.trim()),
-          variant: variant, studentName: names[i],
-        );
         final safeIndex = (i + 1).toString().padLeft(3, '0');
-        final file = File('${directory.path}/alqadi_${safeIndex}_${variant.code}.pdf');
-        await file.writeAsBytes(bytes, flush: true);
-        files.add(XFile(file.path, mimeType: 'application/pdf'));
+        final paperBytes = await ExamPaperService.buildPdf(
+          currentExam, variant: variant, studentName: names[i],
+        );
+        final paperFile = File('${directory.path}/exam_${safeIndex}_${variant.code}.pdf');
+        await paperFile.writeAsBytes(paperBytes, flush: true);
+        files.add(XFile(paperFile.path, mimeType: 'application/pdf'));
+        final answerBytes = await OmrSheetService.buildPdf(
+          currentExam, variant: variant, studentName: names[i],
+        );
+        final answerFile = File('${directory.path}/answers_${safeIndex}_${variant.code}.pdf');
+        await answerFile.writeAsBytes(answerBytes, flush: true);
+        files.add(XFile(answerFile.path, mimeType: 'application/pdf'));
       }
       if (files.isNotEmpty) {
-        await Share.shareXFiles(files, text: 'أوراق إجابة الطلاب — ${names.length} طالباً');
+        await Share.shareXFiles(files, text: 'نسخ الاختبار وأوراق الإجابة للطلاب — ${names.length} طالباً');
       }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تجهيز أوراق الطلاب: $error')));
