@@ -118,7 +118,7 @@ class ExamVariantFactory {
 }
 
 class ExamQuestion {
-  ExamQuestion({required this.text, List<String>? options})
+  const ExamQuestion({required this.text, List<String>? options})
       : options = options ?? <String>[];
   final String text;
   final List<String> options;
