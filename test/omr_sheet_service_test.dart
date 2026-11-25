@@ -76,6 +76,22 @@ void main() {
     expect(tf.y, mcq.y);
   });
 
+  test('rejects an impossible number of distinct variants with the actual maximum', () {
+    expect(
+      () => ExamVariantFactory.generate(
+        examId: 'tiny-exam-1234',
+        questionTypes: const ['tf', 'mcq'],
+        optionCount: 2,
+        count: 3,
+      ),
+      throwsA(isA<ArgumentError>().having(
+        (error) => error.message.toString(),
+        'message',
+        contains('الحد الأقصى الممكن هو 2'),
+      )),
+    );
+  });
+
   test('generates 30 distinct reproducible variants and keeps the original key mapping', () {
     final types = <String>['tf', 'tf', 'mcq', 'mcq', 'mcq'];
     final first = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, count: 30);
