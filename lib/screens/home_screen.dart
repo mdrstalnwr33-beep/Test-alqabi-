@@ -65,6 +65,31 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(tf, 'tf'), ...List<String>.filled(mcq, 'mcq')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
     await _persist();
   }
+  Future<void> _deleteExam(Exam exam) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف الاختبار'),
+        content: Text('هل تريد حذف اختبار «${exam.title}» ونماذجه ومفتاح إجابته؟\\n\\nسيتم الاحتفاظ بسجل النتائج السابقة ولن تُحذف درجات الطلاب.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('حذف الاختبار'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => exams.removeWhere((item) => item.id == exam.id));
+    await store.saveExams(exams);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم حذف الاختبار مع الاحتفاظ بالنتائج السابقة.')),
+    );
+  }
+
   void addResult(ExamResult result) async {
     setState(() => results.insert(0, result));
     await store.saveResults(results);
@@ -108,7 +133,26 @@ class _HomeScreenState extends State<HomeScreen> {
     Row(children: [_stat('الاختبارات', exams.length.toString(), Icons.assignment_outlined), const SizedBox(width: 10), _stat('أوراق مصححة', results.length.toString(), Icons.fact_check_outlined)]),
     const SizedBox(height: 22), const Text('اختباراتي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
     if (exams.isEmpty) Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Column(children: [Icon(Icons.note_add_outlined, size: 42, color: Color(0xFF12A89D)), SizedBox(height: 10), Text('لا توجد اختبارات بعد', style: TextStyle(fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('اضغط «اختبار جديد» للبدء.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54))]))
-    else ...exams.map((e) => Card(margin: const EdgeInsets.only(bottom: 9), child: ListTile(leading: const CircleAvatar(child: Icon(Icons.assignment_outlined)), title: Text(e.title, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text(e.subject + ' • ' + e.questionCount.toString() + ' سؤال • ' + (e.hasAnswerKey ? 'مفتاح مكتمل' : 'مفتاح غير مكتمل')), trailing: const Icon(Icons.chevron_left), onTap: () => openExam(e)))),
+    else ...exams.map((e) => Card(
+      margin: const EdgeInsets.only(bottom: 9),
+      child: ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.assignment_outlined)),
+        title: Text(e.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(e.subject + ' • ' + e.questionCount.toString() + ' سؤال • ' + (e.hasAnswerKey ? 'مفتاح مكتمل' : 'مفتاح غير مكتمل')),
+        trailing: PopupMenuButton<String>(
+          tooltip: 'خيارات الاختبار',
+          onSelected: (value) {
+            if (value == 'open') openExam(e);
+            if (value == 'delete') _deleteExam(e);
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'open', child: ListTile(dense: true, leading: Icon(Icons.edit_outlined), title: Text('فتح الاختبار'))),
+            PopupMenuItem(value: 'delete', child: ListTile(dense: true, leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('حذف الاختبار'))),
+          ],
+        ),
+        onTap: () => openExam(e),
+      ),
+    )),
   ]);
   Widget _stat(String label, String value, IconData icon) => Expanded(child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: const Color(0xFF12A89D)), const SizedBox(height: 8), Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), Text(label, style: const TextStyle(color: Colors.black54))])));
   Widget _resultsPage() {
