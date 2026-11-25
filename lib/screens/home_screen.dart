@@ -271,6 +271,19 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
         throw StateError('حدد الإجابة الصحيحة لجميع الأسئلة قبل توزيع الاختبار.');
       }
+      final currentExam = Exam(
+        id: widget.exam.id,
+        title: title.text.trim(),
+        subject: subject.text.trim(),
+        questionCount: widget.exam.questionCount,
+        optionCount: widget.exam.optionCount,
+        answerKey: List<int?>.from(answers),
+        createdAt: widget.exam.createdAt,
+        questionTypes: List<String>.from(questionTypes),
+        schoolName: school.text.trim(),
+        teacherName: teacher.text.trim(),
+        variants: List<ExamVariant>.from(variants),
+      );
       final assignments = <AnswerSheetAssignment>[
         for (var i = 0; i < names.length; i++)
           AnswerSheetAssignment(
