@@ -160,6 +160,19 @@ void main() {
 
     expect(result.answers, exam.answerKey);
     expect(result.variantCode, variant.code);
+    for (var originalQuestion = 0; originalQuestion < exam.questionCount; originalQuestion++) {
+      expect(
+        result.questionNumbers[originalQuestion],
+        variant.questionOrder.indexOf(originalQuestion) + 1,
+      );
+      expect(
+        result.optionDisplayIndex[originalQuestion],
+        List<int>.generate(
+          exam.optionsFor(originalQuestion),
+          (option) => variant.optionOrder[originalQuestion].indexOf(option),
+        ),
+      );
+    }
   });
 
   test('rejects corners supplied in the wrong order', () async {
