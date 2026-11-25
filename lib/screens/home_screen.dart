@@ -278,6 +278,11 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
         throw StateError('حدد الإجابة الصحيحة لجميع الأسئلة قبل توزيع الاختبار.');
       }
+      // Persist the latest key and question layout before exporting student sheets.
+      // Otherwise the printed sheets could use unsaved answers while later scanning
+      // reloads an older answer key from local storage.
+      await _save();
+      if (!mounted) return;
       final currentExam = Exam(
         id: widget.exam.id,
         title: title.text.trim(),
