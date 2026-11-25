@@ -123,7 +123,7 @@ class OmrScannerService {
     _validateCorners(detectedCorners, source.width, source.height);
     final warped = _warp(source, detectedCorners);
     final identity = await (_identityReader?.call(warped) ?? _readStudentIdentity(warped));
-    final variantCode = await (_variantCodeReader?.call(warped) ?? _readVariantCode(warped));
+    var variantCode = await (_variantCodeReader?.call(warped) ?? _readVariantCode(warped));
     ExamVariant? variant;
     if (exam.variants.isNotEmpty) {
       if (variantCode.isEmpty) throw StateError('تعذر قراءة كود النموذج؛ أعد تصوير الورقة بوضوح. لم يتم التصحيح.');
@@ -139,6 +139,8 @@ class OmrScannerService {
         }
       }
       if (variant == null) throw StateError('كود النموذج غير مسجل في هذا الاختبار: $variantCode. أوقف التصحيح لحماية النتيجة.');
+      // Store and display the canonical registered code, not the noisy OCR text.
+      variantCode = variant.code;
     } else if (variantCode.isNotEmpty && variantCode != 'BASE') {
       throw StateError('كود الورقة لا يطابق الاختبار المحدد.');
     }
