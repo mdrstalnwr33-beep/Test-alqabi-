@@ -10,6 +10,8 @@ void main() {
     );
     expect(StudentNameParser.isAtLeastThreeParts('محمد أحمد علي'), isTrue);
     expect(StudentNameParser.isAtLeastThreeParts('محمد أحمد'), isFalse);
+    expect(StudentNameParser.parse('محمد أحمد علي؛ خالد حسن صالح'),
+        ['محمد أحمد علي', 'خالد حسن صالح']);
   });
 
   test('all OMR bubble centers remain inside the A4 page', () {
