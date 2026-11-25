@@ -122,11 +122,11 @@ class ExamVariantFactory {
 /// lists are also accepted.
 class StudentNameParser {
   static List<String> parse(String input) {
-    final normalized = input.replaceAll('\\r\\n', '\\n').replaceAll('\\r', '\\n');
+    final normalized = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     return normalized
-        .split(RegExp(r'[\\n;]+'))
+        .split(RegExp(r'[\n;]+'))
         .map((row) => row.trim().replaceFirst(
-              RegExp(r'^\\s*(?:(?:[0-9٠-٩]+)\\s*[.)\\-:]\\s*|[•●▪\\-–—]\\s*)'),
+              RegExp(r'^\s*(?:(?:[0-9٠-٩]+)\s*[.)\-:]\s*|[•●▪\-–—]\s*)'),
               '',
             ).trim())
         .where((name) => name.isNotEmpty)
@@ -134,9 +134,8 @@ class StudentNameParser {
   }
 
   static bool isAtLeastThreeParts(String name) =>
-      name.trim().split(RegExp(r'\\s+')).where((part) => part.isNotEmpty).length >= 3;
+      name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).length >= 3;
 }
-
 class ExamQuestion {
   const ExamQuestion({required this.text, List<String>? options})
       : options = options ?? const <String>[];
