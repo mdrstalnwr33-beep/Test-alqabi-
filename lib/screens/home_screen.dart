@@ -155,7 +155,18 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
-    final updated = Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(), questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount, answerKey: answers, createdAt: widget.exam.createdAt, questionTypes: questionTypes, schoolName: school.text.trim(), teacherName: teacher.text.trim());
+    final sameQuestionLayout = questionTypes.length == widget.exam.questionTypes.length &&
+        List<bool>.generate(questionTypes.length, (i) => questionTypes[i] == widget.exam.questionTypes[i]).every((v) => v);
+    final updated = Exam(
+      id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+      questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
+      answerKey: List<int?>.from(answers), createdAt: widget.exam.createdAt,
+      questionTypes: List<String>.from(questionTypes),
+      schoolName: school.text.trim(), teacherName: teacher.text.trim(),
+      // Keep generated forms when only metadata or answer-key values change.
+      // A changed question layout invalidates their mappings, so discard them.
+      variants: sameQuestionLayout ? widget.exam.variants : const [],
+    );
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
@@ -171,6 +182,8 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       questionTypes: List<String>.from(questionTypes),
       schoolName: school.text.trim(),
       teacherName: teacher.text.trim(),
+      // PDF actions must not silently strip the variants already saved on the exam.
+      variants: widget.exam.variants,
     );
     return OmrSheetService.buildPdf(currentExam);
   }
