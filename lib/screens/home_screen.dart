@@ -7,7 +7,6 @@ import 'package:share_plus/share_plus.dart';
 import '../models/exam.dart';
 import '../services/app_store.dart';
 import '../services/omr_sheet_service.dart';
-import '../services/exam_paper_service.dart';
 import '../services/report_service.dart';
 import 'scan_screen.dart';
 
@@ -137,45 +136,11 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   late List<int?> answers;
   late List<String> questionTypes;
   late List<ExamVariant> variants;
-  late List<ExamQuestion> questions;
   final title = TextEditingController(), subject = TextEditingController();
   final school = TextEditingController(), teacher = TextEditingController();
   @override
   void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); variants = List<ExamVariant>.from(widget.exam.variants);
-    questions = List<ExamQuestion>.generate(widget.exam.questionCount, (i) {
-      if (i < widget.exam.questions.length) return widget.exam.questions[i];
-      final count = widget.exam.questionTypes[i] == 'tf' ? 2 : widget.exam.optionCount;
-      return ExamQuestion(text: '', options: List<String>.filled(count, ''));
-    });
     title.text = widget.exam.title; subject.text = widget.exam.subject; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
-
-  Future<void> _editQuestionContent(int index) async {
-    final questionController = TextEditingController(text: questions[index].text);
-    final optionCount = questionTypes[index] == 'tf' ? 2 : widget.exam.optionCount;
-    final optionControllers = List.generate(optionCount, (i) => TextEditingController(
-      text: i < questions[index].options.length ? questions[index].options[i] : (questionTypes[index] == 'tf' ? (i == 0 ? 'صح' : 'خطأ') : ''),
-    ));
-    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text('محتوى السؤال ${index + 1}'),
-      content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: questionController, minLines: 2, maxLines: 4, textDirection: TextDirection.rtl,
-          decoration: const InputDecoration(labelText: 'نص السؤال', border: OutlineInputBorder())),
-        const SizedBox(height: 12),
-        ...List.generate(optionCount, (i) => Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(
-          controller: optionControllers[i], textDirection: TextDirection.rtl,
-          decoration: InputDecoration(labelText: questionTypes[index] == 'tf' ? (i == 0 ? 'صح' : 'خطأ') : 'الخيار ${String.fromCharCode(65+i)}', border: const OutlineInputBorder()),
-        ))),
-      ]))),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ'))],
-    ));
-    if (saved == true && mounted) {
-      setState(() => questions[index] = ExamQuestion(text: questionController.text.trim(), options: optionControllers.map((c) => c.text.trim()).toList()));
-      await _save(allowIncomplete: true);
-    }
-    questionController.dispose();
-    for (final c in optionControllers) { c.dispose(); }
-  }
 
   Future<void> _editExamDetails() async {
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
@@ -201,7 +166,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       // Keep generated forms when only metadata or answer-key values change.
       // A changed question layout invalidates their mappings, so discard them.
       variants: List<ExamVariant>.from(variants),
-      questions: List<ExamQuestion>.from(questions),
     );
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
@@ -248,8 +212,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         questionTypes: List<String>.from(questionTypes),
         schoolName: school.text.trim(), teacherName: teacher.text.trim(),
         variants: variants,
-        questions: List<ExamQuestion>.from(questions),
-      );
+        );
       this.variants = List<ExamVariant>.from(variants);
       widget.onSave(updated);
       if (mounted) setState(() {});
@@ -308,39 +271,23 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
         throw StateError('حدد الإجابة الصحيحة لجميع الأسئلة قبل توزيع الاختبار.');
       }
-      if (questions.length != widget.exam.questionCount ||
-          questions.any((q) => q.text.trim().isEmpty)) {
-        throw StateError('أدخل نص جميع الأسئلة أولاً من زر «إضافة نص السؤال والخيارات».');
-      }
-      for (var q = 0; q < questions.length; q++) {
-        final requiredOptions = questionTypes[q] == 'tf' ? 2 : widget.exam.optionCount;
-        if (questions[q].options.length != requiredOptions ||
-            questions[q].options.any((v) => v.trim().isEmpty)) {
-          throw StateError('أكمل خيارات السؤال ${q + 1} أولاً.');
-        }
-      }
       final directory = await getTemporaryDirectory();
       final files = <XFile>[];
       final currentExam = Exam(
         id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
         questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
         answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes),
-        questions: List<ExamQuestion>.from(questions),
-        schoolName: school.text.trim(), teacherName: teacher.text.trim(),
+          schoolName: school.text.trim(), teacherName: teacher.text.trim(),
+        variants: List<ExamVariant>.from(variants),
       );
       for (var i = 0; i < names.length; i++) {
         final variant = variants[i % variants.length];
         final safeIndex = (i + 1).toString().padLeft(3, '0');
-        final paperBytes = await ExamPaperService.buildPdf(
-          currentExam, variant: variant, studentName: names[i],
-        );
-        final paperFile = File('${directory.path}/exam_${safeIndex}_${variant.code}.pdf');
-        await paperFile.writeAsBytes(paperBytes, flush: true);
-        files.add(XFile(paperFile.path, mimeType: 'application/pdf'));
         final answerBytes = await OmrSheetService.buildPdf(
           currentExam, variant: variant, studentName: names[i],
         );
-        final answerFile = File('${directory.path}/answers_${safeIndex}_${variant.code}.pdf');
+        final safeName = names[i].replaceAll(RegExp(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFA-Za-z0-9_-]+'), '_');
+        final answerFile = File('${directory.path}/ورقة_الإجابة_${safeIndex}_${safeName}_${variant.code}.pdf');
         await answerFile.writeAsBytes(answerBytes, flush: true);
         files.add(XFile(answerFile.path, mimeType: 'application/pdf'));
       }
@@ -366,7 +313,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       teacherName: teacher.text.trim(),
       // PDF actions must not silently strip the variants already saved on the exam.
       variants: variants,
-      questions: List<ExamQuestion>.from(questions),
     );
     return OmrSheetService.buildPdf(currentExam);
   }
@@ -431,7 +377,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
-        const SizedBox(height: 6), const Text('اختر نوع كل سؤال (اختيار من متعدد أو صح/خطأ)، ثم حدد الإجابة الصحيحة واطبع الورقة.', style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 6), const Text('هذا التطبيق يصمم ورقة الإجابة فقط: حدّد نوع كل فقرة ومفتاحها، ثم أنشئ النماذج ووزّع ورقة باسم كل طالب.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
           OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
@@ -474,10 +420,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                         onChanged: (v) => setState(() {
                           questionTypes[i] = v!;
                           final newCount = v == 'tf' ? 2 : widget.exam.optionCount;
-                          questions[i] = ExamQuestion(
-                            text: questions[i].text,
-                            options: List<String>.generate(newCount, (j) => j < questions[i].options.length ? questions[i].options[j] : (v == 'tf' ? (j == 0 ? 'صح' : 'خطأ') : '')),
-                          );
                           variants.clear();
                           if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) {
                             answers[i] = null;
@@ -486,12 +428,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                       ),
                     ),
                   ]),
-                  const SizedBox(height: 6),
-                  OutlinedButton.icon(
-                    onPressed: () => _editQuestionContent(i),
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: Text(questions[i].text.trim().isEmpty ? 'إضافة نص السؤال والخيارات' : 'تعديل نص السؤال والخيارات'),
-                  ),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
