@@ -7,10 +7,10 @@ import '../models/exam.dart';
 import 'omr_sheet_service.dart';
 class ScanPoint { const ScanPoint(this.x, this.y); final double x, y; }
 class OmrReadout {
-  const OmrReadout({required this.answers, required this.ambiguousQuestions, required this.blankQuestions, this.studentName = '', this.seatNumber = ''});
+  const OmrReadout({required this.answers, required this.ambiguousQuestions, required this.blankQuestions, this.studentName = '', this.seatNumber = '', this.variantCode = ''});
   final List<int?> answers;
   final List<int> ambiguousQuestions, blankQuestions;
-  final String studentName, seatNumber;
+  final String studentName, seatNumber, variantCode;
 }
 class OmrScannerService {
   static const outputWidth = 1190, outputHeight = 1684;
@@ -114,20 +114,65 @@ class OmrScannerService {
     _validateCorners(detectedCorners, source.width, source.height);
     final warped = _warp(source, detectedCorners);
     final identity = await _readStudentIdentity(warped);
-    final answers = <int?>[], ambiguous = <int>[], blanks = <int>[];
-    for (var q = 0; q < exam.questionCount; q++) {
+    final variantCode = await _readVariantCode(warped);
+    ExamVariant? variant;
+    if (exam.variants.isNotEmpty) {
+      if (variantCode.isEmpty) throw StateError('تعذر قراءة كود النموذج؛ أعد تصوير الورقة بوضوح. لم يتم التصحيح.');
+      for (final candidate in exam.variants) {
+        if (candidate.code == variantCode) { variant = candidate; break; }
+      }
+      if (variant == null) throw StateError('كود النموذج غير مسجل في هذا الاختبار: $variantCode. أوقف التصحيح لحماية النتيجة.');
+    } else if (variantCode != 'BASE') {
+      throw StateError('كود الورقة لا يطابق الاختبار المحدد.');
+    }
+    final layoutExam = variant == null ? exam : Exam(
+      id: exam.id, title: exam.title, subject: exam.subject,
+      questionCount: exam.questionCount, optionCount: exam.optionCount,
+      answerKey: exam.answerKey,
+      questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
+      schoolName: exam.schoolName, teacherName: exam.teacherName,
+    );
+    final displayedAnswers = <int?>[], ambiguous = <int>[], blanks = <int>[];
+    for (var q = 0; q < layoutExam.questionCount; q++) {
       final scores = <double>[];
-      for (var option = 0; option < exam.optionsFor(q); option++) {
-        final p = OmrSheetService.positionFor(exam, q, option);
+      for (var option = 0; option < layoutExam.optionsFor(q); option++) {
+        final p = OmrSheetService.positionFor(layoutExam, q, option);
         scores.add(_darkRatio(warped, (p.x * outputWidth).round(), (p.y * outputHeight).round()));
       }
       final ranked = List<int>.generate(scores.length, (i) => i)..sort((a, b) => scores[b].compareTo(scores[a]));
       final best = scores[ranked.first], second = ranked.length > 1 ? scores[ranked[1]] : 0.0;
-      if (best < 0.22) { answers.add(null); blanks.add(OmrSheetService.visualQuestionNumber(exam, q)); }
-      else if (best < 0.48 || best - second < 0.14) { answers.add(null); ambiguous.add(OmrSheetService.visualQuestionNumber(exam, q)); }
-      else { answers.add(ranked.first); }
+      if (best < 0.22) { displayedAnswers.add(null); blanks.add(OmrSheetService.visualQuestionNumber(layoutExam, q)); }
+      else if (best < 0.48 || best - second < 0.14) { displayedAnswers.add(null); ambiguous.add(OmrSheetService.visualQuestionNumber(layoutExam, q)); }
+      else { displayedAnswers.add(ranked.first); }
     }
-    return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks, studentName: identity.$1, seatNumber: identity.$2);
+    final answers = variant == null ? displayedAnswers : variant.mapDisplayedAnswersToOriginal(displayedAnswers);
+    return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks,
+      studentName: identity.$1, seatNumber: identity.$2, variantCode: variantCode);
+  }
+
+  Future<String> _readVariantCode(imglib.Image warped) async {
+    const left = 48, top = 1620, width = 500, height = 52;
+    if (warped.width < left + width || warped.height < top + height) return '';
+    final crop = imglib.copyCrop(warped, x: left, y: top, width: width, height: height);
+    final cleaned = imglib.grayscale(crop);
+    imglib.contrast(cleaned, contrast: 150);
+    final enlarged = imglib.copyResize(cleaned, width: width * 3, height: height * 3,
+      interpolation: imglib.Interpolation.cubic);
+    final dir = await Directory.systemTemp.createTemp('alqadi_variant_');
+    final file = File('${dir.path}/variant_code.png');
+    try {
+      await file.writeAsBytes(imglib.encodePng(enlarged), flush: true);
+      final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
+        language: 'eng', engine: OCREngine.tesseract,
+        options: {'tessedit_pageseg_mode': '7', 'tessedit_char_whitelist': 'QABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-:'},
+      ));
+      final normalized = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9-]'), '');
+      if (normalized.contains('BASE')) return 'BASE';
+      final match = RegExp(r'Q[A-Z0-9]{4}-[0-9]{2}').firstMatch(normalized);
+      return match?.group(0) ?? '';
+    } finally {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    }
   }
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
