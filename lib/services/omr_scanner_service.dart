@@ -248,9 +248,9 @@ class OmrScannerService {
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
     String cleanName(String raw) => raw
-        .replaceAll(RegExp(r'اسم\\s*الطالب|اسم\\s*التلميذ|الطالب|التلميذ|رقم\\s*الجلوس|الجلوس|رقم'), ' ')
-        .replaceAll(RegExp(r'[^\\u0621-\\u064A\\s]'), ' ')
-        .replaceAll(RegExp(r'\\s+'), ' ')
+        .replaceAll(RegExp(r'اسم\s*الطالب|اسم\s*التلميذ|الطالب|التلميذ|رقم\s*الجلوس|الجلوس|رقم'), ' ')
+        .replaceAll(RegExp(r'[^\u0621-\u064A\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
 
     Future<String> recognize({
@@ -304,17 +304,17 @@ class OmrScannerService {
         if (isName) {
           candidates.sort((a, b) {
             final cleanA = cleanName(a), cleanB = cleanName(b);
-            final lettersA = RegExp(r'[\\u0621-\\u064A]').allMatches(cleanA).length;
-            final lettersB = RegExp(r'[\\u0621-\\u064A]').allMatches(cleanB).length;
-            final wordsA = cleanA.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).length;
-            final wordsB = cleanB.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).length;
+            final lettersA = RegExp(r'[\u0621-\u064A]').allMatches(cleanA).length;
+            final lettersB = RegExp(r'[\u0621-\u064A]').allMatches(cleanB).length;
+            final wordsA = cleanA.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+            final wordsB = cleanB.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
             final scoreA = lettersA + (wordsA >= 3 ? 20 : wordsA == 2 ? 8 : 0);
             final scoreB = lettersB + (wordsB >= 3 ? 20 : wordsB == 2 ? 8 : 0);
             return scoreB.compareTo(scoreA);
           });
         } else {
-          candidates.sort((a, b) => RegExp(r'\\d').allMatches(b).length
-              .compareTo(RegExp(r'\\d').allMatches(a).length));
+          candidates.sort((a, b) => RegExp(r'\d').allMatches(b).length
+              .compareTo(RegExp(r'\d').allMatches(a).length));
         }
         return candidates.isEmpty ? '' : candidates.first;
       } finally {
@@ -337,7 +337,7 @@ class OmrScannerService {
         language: 'ara+eng',
       );
       final name = cleanName(rawName);
-      final arabicLetters = RegExp(r'[\\u0621-\\u064A]').allMatches(name).length;
+      final arabicLetters = RegExp(r'[\u0621-\u064A]').allMatches(name).length;
       final normalizedDigits = rawSeat
           .replaceAll('٠', '0').replaceAll('١', '1')
           .replaceAll('٢', '2').replaceAll('٣', '3')
@@ -347,7 +347,7 @@ class OmrScannerService {
       // Never mistake a printed field label such as "رقم الجلوس" for a name.
       return (
         arabicLetters >= 4 ? name : '',
-        RegExp(r'\\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
+        RegExp(r'\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
       );
     } catch (_) {
       return ('', '');
