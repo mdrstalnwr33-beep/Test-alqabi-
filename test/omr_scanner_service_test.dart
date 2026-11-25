@@ -102,6 +102,33 @@ void main() {
     expect(result.ambiguousQuestions, [2]);
   });
 
+  test('still scans the original BASE sheet after variants have been generated', () async {
+    final base = makeExam();
+    final variant = ExamVariantFactory.generate(
+      examId: base.id,
+      questionTypes: base.questionTypes,
+      optionCount: base.optionCount,
+      count: 1,
+    ).single;
+    final exam = base.copyWith(variants: [variant]);
+    final image = blankSheet();
+    shade(image, exam, 0, 2);
+    shade(image, exam, 1, 0);
+    final baseScanner = OmrScannerService(
+      identityReader: (_) async => ('', ''),
+      variantCodeReader: (_) async => 'BASE',
+    );
+
+    final result = await baseScanner.scan(
+      imageBytes: imglib.encodePng(image),
+      corners: corners(),
+      exam: exam,
+    );
+
+    expect(result.answers, exam.answerKey);
+    expect(result.variantCode, 'BASE');
+  });
+
   test('maps a shuffled variant correctly when OCR appends one extra code digit', () async {
     final base = makeExam();
     final variant = ExamVariantFactory.generate(
