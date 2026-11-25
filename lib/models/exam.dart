@@ -119,7 +119,7 @@ class ExamVariantFactory {
 
 class ExamQuestion {
   const ExamQuestion({required this.text, List<String>? options})
-      : options = options ?? <String>[];
+      : options = options ?? const <String>[];
   final String text;
   final List<String> options;
   Map<String, dynamic> toJson() => {'text': text, 'options': options};
