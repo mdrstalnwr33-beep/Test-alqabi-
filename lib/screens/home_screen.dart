@@ -43,15 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final school = TextEditingController(), teacher = TextEditingController();
     final tfCount = TextEditingController(text: '10'), mcqCount = TextEditingController(text: '10'), options = TextEditingController(text: '4');
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-      title: const Text('إنشاء اختبار جديد'),
+      title: const Text('إنشاء ورقة إجابة جديدة'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم الاختبار')),
         const SizedBox(height: 10), TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
         const SizedBox(height: 10), TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         const SizedBox(height: 10), TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
-        const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'أولاً: عدد أسئلة الصح والخطأ')),
-        const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ثانياً: عدد أسئلة الاختيار من متعدد')),
-        const SizedBox(height: 6), const Text('سيُرتّب الاختبار الصح والخطأ أولاً، ثم الاختيار من متعدد. يمكنك تعديل الأعداد.', style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'أولاً: عدد فقرات الصح والخطأ')),
+        const SizedBox(height: 10), TextField(controller: mcqCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ثانياً: عدد فقرات الاختيار من متعدد')),
+        const SizedBox(height: 6), const Text('حدد عدد الفقرات وأنواعها فقط؛ لا تحتاج إلى إدخال نصوص الأسئلة هنا.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 10), TextField(controller: options, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد الخيارات (2–5)')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إنشاء'))],
@@ -292,7 +292,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         files.add(XFile(answerFile.path, mimeType: 'application/pdf'));
       }
       if (files.isNotEmpty) {
-        await Share.shareXFiles(files, text: 'نسخ الاختبار وأوراق الإجابة للطلاب — ${names.length} طالباً');
+        await Share.shareXFiles(files, text: 'أوراق الإجابة المخصصة للطلاب — ${names.length} طالباً');
       }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تجهيز أوراق الطلاب: $error')));
@@ -377,7 +377,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
-        const SizedBox(height: 6), const Text('هذا التطبيق يصمم ورقة الإجابة فقط: حدّد نوع كل فقرة ومفتاحها، ثم أنشئ النماذج ووزّع ورقة باسم كل طالب.', style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 6), const Text('هذا التطبيق يصمم أوراق الإجابة فقط: حدّد نوع كل فقرة ومفتاحها، ثم أنشئ النماذج ووزّع ورقة باسم كل طالب.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
           OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
@@ -419,8 +419,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                         ],
                         onChanged: (v) => setState(() {
                           questionTypes[i] = v!;
-                          final newCount = v == 'tf' ? 2 : widget.exam.optionCount;
-                          variants.clear();
+                                            variants.clear();
                           if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) {
                             answers[i] = null;
                           }
