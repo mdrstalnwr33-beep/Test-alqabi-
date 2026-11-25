@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as imglib;
 import '../models/exam.dart';
 import '../services/omr_scanner_service.dart';
+import '../services/omr_grading_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key, required this.exams, required this.onResult});
@@ -56,40 +57,17 @@ class _ScanScreenState extends State<ScanScreen> {
       )));
       if (review == null || !mounted) return;
       final reviewed = review.answers;
-      final variantKey = readout.variantAnswerKey;
-      final questionOrder = readout.questionOrder;
-      if (variantKey.length != exam.questionCount ||
-          questionOrder.length != exam.questionCount ||
-          readout.optionDisplayIndex.length != exam.questionCount) {
-        throw StateError('مفتاح النموذج غير مكتمل أو لا يطابق ترتيب الأسئلة. أوقف التصحيح لحماية الدرجة.');
-      }
-      var correct = 0, incorrect = 0, unanswered = 0;
-      // Review answers are kept in original exam order for editing. Convert
-      // each reviewed response back to this scanned variant's displayed
-      // question/option indexes, then compare only with that variant's key.
-      for (var displayedQ = 0; displayedQ < questionOrder.length; displayedQ++) {
-        final originalQ = questionOrder[displayedQ];
-        if (originalQ < 0 || originalQ >= reviewed.length) {
-          throw StateError('ترتيب أسئلة النموذج غير صالح. لم يتم اعتماد الدرجة.');
-        }
-        final originalAnswer = reviewed[originalQ];
-        if (originalAnswer == null) {
-          unanswered++;
-          continue;
-        }
-        final optionMap = readout.optionDisplayIndex[originalQ];
-        final displayedAnswer = originalAnswer < 0 || originalAnswer >= optionMap.length
-            ? -1
-            : optionMap[originalAnswer];
-        if (displayedAnswer < 0 || displayedAnswer >= (exam.questionTypes[originalQ] == 'tf' ? 2 : exam.optionCount)) {
-          throw StateError('ترتيب خيارات النموذج غير صالح. لم يتم اعتماد الدرجة.');
-        }
-        if (displayedAnswer == variantKey[displayedQ]) {
-          correct++;
-        } else {
-          incorrect++;
-        }
-      }
+      final grade = OmrGradingService.grade(
+        originalAnswers: reviewed,
+        questionOrder: readout.questionOrder,
+        optionDisplayIndex: readout.optionDisplayIndex,
+        displayedAnswerKey: readout.variantAnswerKey,
+        questionTypes: exam.questionTypes,
+        optionCount: exam.optionCount,
+      );
+      final correct = grade.correct;
+      final incorrect = grade.incorrect;
+      final unanswered = grade.unanswered;
       final savedCorrectAnswers = List<int?>.filled(exam.questionCount, null);
       if (readout.variantCode == 'BASE') {
         for (var q = 0; q < exam.questionCount; q++) { savedCorrectAnswers[q] = exam.answerKey[q]; }
