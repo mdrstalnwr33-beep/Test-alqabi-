@@ -130,6 +130,14 @@ class OmrScannerService {
       for (final candidate in exam.variants) {
         if (candidate.code == variantCode) { variant = candidate; break; }
       }
+      // OCR sometimes appends one extra trailing digit to a two-digit code
+      // (for example, reading Q1234-01 as Q1234-017). Retry only that case.
+      if (variant == null && variantCode.length > 1) {
+        final shortened = variantCode.substring(0, variantCode.length - 1);
+        for (final candidate in exam.variants) {
+          if (candidate.code == shortened) { variant = candidate; break; }
+        }
+      }
       if (variant == null) throw StateError('كود النموذج غير مسجل في هذا الاختبار: $variantCode. أوقف التصحيح لحماية النتيجة.');
     } else if (variantCode.isNotEmpty && variantCode != 'BASE') {
       throw StateError('كود الورقة لا يطابق الاختبار المحدد.');
