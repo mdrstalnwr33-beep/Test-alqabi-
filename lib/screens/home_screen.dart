@@ -157,14 +157,15 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
+    // Keep every saved variant's own displayed key synchronized with the
+    // teacher's source key. The question/option permutations remain unchanged.
+    variants = variants.map((variant) => variant.withAnswerKey(answers)).toList();
     final updated = Exam(
       id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
       questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
       answerKey: List<int?>.from(answers), createdAt: widget.exam.createdAt,
       questionTypes: List<String>.from(questionTypes),
       schoolName: school.text.trim(), teacherName: teacher.text.trim(),
-      // Keep generated forms when only metadata or answer-key values change.
-      // A changed question layout invalidates their mappings, so discard them.
       variants: List<ExamVariant>.from(variants),
     );
     await widget.onSave(updated);
@@ -210,7 +211,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     try {
       final variants = ExamVariantFactory.generate(
         examId: widget.exam.id, questionTypes: questionTypes,
-        optionCount: widget.exam.optionCount, count: count,
+        optionCount: widget.exam.optionCount, answerKey: List<int?>.from(answers), count: count,
       );
       final updated = Exam(
         id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
