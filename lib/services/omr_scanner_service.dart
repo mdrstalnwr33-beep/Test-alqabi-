@@ -122,7 +122,7 @@ class OmrScannerService {
         if (candidate.code == variantCode) { variant = candidate; break; }
       }
       if (variant == null) throw StateError('كود النموذج غير مسجل في هذا الاختبار: $variantCode. أوقف التصحيح لحماية النتيجة.');
-    } else if (variantCode != 'BASE') {
+    } else if (variantCode.isNotEmpty && variantCode != 'BASE') {
       throw StateError('كود الورقة لا يطابق الاختبار المحدد.');
     }
     final layoutExam = variant == null ? exam : Exam(
