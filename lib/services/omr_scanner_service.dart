@@ -13,6 +13,15 @@ class OmrReadout {
   final String studentName, seatNumber, variantCode;
 }
 class OmrScannerService {
+  OmrScannerService({
+    Future<String> Function(imglib.Image)? variantCodeReader,
+    Future<(String, String)> Function(imglib.Image)? identityReader,
+  }) : _variantCodeReader = variantCodeReader,
+       _identityReader = identityReader;
+
+  final Future<String> Function(imglib.Image)? _variantCodeReader;
+  final Future<(String, String)> Function(imglib.Image)? _identityReader;
+
   static const outputWidth = 1190, outputHeight = 1684;
   Future<List<ScanPoint>> detectCorners(Uint8List imageBytes) async {
     final decoded = imglib.decodeImage(imageBytes);
@@ -113,8 +122,8 @@ class OmrScannerService {
     if (detectedCorners.length != 4) throw ArgumentError('تعذر تحديد زوايا الورقة تلقائياً.');
     _validateCorners(detectedCorners, source.width, source.height);
     final warped = _warp(source, detectedCorners);
-    final identity = await _readStudentIdentity(warped);
-    final variantCode = await _readVariantCode(warped);
+    final identity = await (_identityReader?.call(warped) ?? _readStudentIdentity(warped));
+    final variantCode = await (_variantCodeReader?.call(warped) ?? _readVariantCode(warped));
     ExamVariant? variant;
     if (exam.variants.isNotEmpty) {
       if (variantCode.isEmpty) throw StateError('تعذر قراءة كود النموذج؛ أعد تصوير الورقة بوضوح. لم يتم التصحيح.');
