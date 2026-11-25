@@ -88,6 +88,27 @@ void main() {
     expect(originalKey, <int?>[1, 0, 2, 3, 1]);
   });
 
+  test('exam question text and choices survive JSON serialization', () {
+    final exam = Exam(
+      id: 'question-content-1', title: 'اختبار', subject: 'علوم',
+      questionCount: 2, optionCount: 3, answerKey: const [1, 2],
+      questionTypes: const ['tf', 'mcq'],
+      questions: const [
+        ExamQuestion(text: 'الماء يتكون من الهيدروجين والأكسجين', options: ['صح', 'خطأ']),
+        ExamQuestion(text: 'ما وحدة قياس القوة؟', options: ['الجول', 'النيوتن', 'الواط']),
+      ],
+    );
+    final restored = Exam.fromJson(exam.toJson());
+    expect(restored.questions, hasLength(2));
+    expect(restored.questions[0].text, 'الماء يتكون من الهيدروجين والأكسجين');
+    expect(restored.questions[1].options, ['الجول', 'النيوتن', 'الواط']);
+    final old = Exam.fromJson({
+      'id': 'legacy-q', 'title': 'قديم', 'subject': '', 'questionCount': 1,
+      'optionCount': 4, 'answerKey': [0], 'questionTypes': ['mcq'],
+    });
+    expect(old.questions, isEmpty);
+  });
+
   test('exam variants survive local JSON serialization and old exam data remains readable', () {
     final exam = Exam(
       id: 'exam-123456', title: 'اختبار', subject: 'علوم', questionCount: 2,
