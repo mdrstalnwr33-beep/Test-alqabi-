@@ -126,6 +126,11 @@ class ExamVariantFactory {
       factorialCapped(trueFalseQuestions.length),
       factorialCapped(multipleChoiceQuestions.length),
     );
+    // Each true/false question can independently swap its displayed labels,
+    // in addition to shuffling the order of the questions themselves.
+    for (var i = 0; i < trueFalseQuestions.length && maximumDistinct < count; i++) {
+      maximumDistinct = multiplyCapped(maximumDistinct, 2);
+    }
     for (var i = 0; i < multipleChoiceQuestions.length && maximumDistinct < count; i++) {
       maximumDistinct = multiplyCapped(maximumDistinct, factorialCapped(optionCount));
     }
@@ -145,8 +150,12 @@ class ExamVariantFactory {
       final questionOrder = [...tfOrder, ...mcqOrder];
       final optionOrder = List<List<int>>.generate(questionTypes.length, (q) {
         final n = questionTypes[q] == 'tf' ? 2 : optionCount;
-        // Keep true/false semantics fixed so the printed labels remain correct.
-        if (questionTypes[q] == 'tf') return List<int>.generate(n, (i) => i);
+        // Randomize the displayed صح/خطأ positions independently for every
+        // true/false question. The sheet renderer prints the matching labels,
+        // and the stored answer key maps each displayed position back to source.
+        if (questionTypes[q] == 'tf') {
+          return List<int>.generate(n, (i) => i)..shuffle(random);
+        }
         return List<int>.generate(n, (i) => i)..shuffle(random);
       });
       final signature = questionOrder.join(',') + '|' + optionOrder.map((row) => row.join(',')).join(';');
