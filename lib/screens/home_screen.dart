@@ -220,8 +220,8 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         schoolName: school.text.trim(), teacherName: teacher.text.trim(),
         variants: variants,
         );
-      this.variants = List<ExamVariant>.from(variants);
       await widget.onSave(updated);
+      this.variants = List<ExamVariant>.from(variants);
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تم إنشاء ${variants.length} نموذجاً وحفظ أكوادها.')),
@@ -299,6 +299,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
             seatNumber: (i + 1).toString().padLeft(3, '0'),
           ),
       ];
+      await widget.onSave(currentExam);
       final bytes = await OmrSheetService.buildBatchPdf(currentExam, assignments: assignments);
       if (!mounted) return;
       await Navigator.push(context, MaterialPageRoute(
@@ -334,6 +335,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       // PDF actions must not silently strip the variants already saved on the exam.
       variants: variants,
     );
+    await widget.onSave(currentExam);
     return OmrSheetService.buildPdf(currentExam);
   }
 
