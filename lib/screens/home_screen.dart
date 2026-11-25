@@ -301,7 +301,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           AnswerSheetAssignment(
             variant: variants[i],
             studentName: names[i],
-            seatNumber: (i + 1).toString().padLeft(3, '0'),
           ),
       ];
       await widget.onSave(currentExam);
