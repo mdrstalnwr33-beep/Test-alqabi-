@@ -75,7 +75,7 @@ class _ScanScreenState extends State<ScanScreen> {
         final savedVariant = exam.variants.firstWhere((v) => v.code == readout.variantCode);
         for (var displayedQ = 0; displayedQ < savedVariant.questionOrder.length; displayedQ++) {
           final originalQ = savedVariant.questionOrder[displayedQ];
-          final displayedCorrect = variantKey[displayedQ];
+          final displayedCorrect = readout.variantAnswerKey[displayedQ];
           if (displayedCorrect != null && displayedCorrect >= 0 && displayedCorrect < savedVariant.optionOrder[originalQ].length) {
             savedCorrectAnswers[originalQ] = savedVariant.optionOrder[originalQ][displayedCorrect];
           }
