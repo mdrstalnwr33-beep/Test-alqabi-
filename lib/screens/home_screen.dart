@@ -305,6 +305,9 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
     namesController.dispose();
     try {
+      if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
+        throw StateError('حدد الإجابة الصحيحة لجميع الأسئلة قبل توزيع الاختبار.');
+      }
       if (questions.length != widget.exam.questionCount ||
           questions.any((q) => q.text.trim().isEmpty)) {
         throw StateError('أدخل نص جميع الأسئلة أولاً من زر «إضافة نص السؤال والخيارات».');
