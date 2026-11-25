@@ -101,6 +101,8 @@ void main() {
     expect(first.map((v) => v.code).toSet().length, 30);
     expect(first.every((v) => v.code.split('-').last.length == 3), isTrue);
     expect(first.map((v) => v.questionOrder.join(',')).toSet().length, greaterThan(1));
+    expect(first.map((v) => v.optionOrder[0].join(',')).toSet().length, greaterThan(1));
+    expect(first.map((v) => v.optionOrder[1].join(',')).toSet().length, greaterThan(1));
     expect(first.map((v) => v.code).toList(), second.map((v) => v.code).toList());
     for (var i = 0; i < first.length; i++) {
       expect(first[i].questionOrder, second[i].questionOrder);
@@ -109,7 +111,9 @@ void main() {
     final originalKey = <int?>[1, 0, 2, 3, 1];
     for (final variant in first) {
       for (var q = 0; q < types.length; q++) {
-        if (types[q] == 'tf') expect(variant.optionOrder[q], [0, 1]);
+        if (types[q] == 'tf') {
+          expect(variant.optionOrder[q].toSet(), <int>{0, 1});
+        }
       }
       for (var displayedQuestion = 0; displayedQuestion < types.length; displayedQuestion++) {
         final displayedCorrect = variant.getDisplayedAnswer(displayedQuestion, originalKey);
