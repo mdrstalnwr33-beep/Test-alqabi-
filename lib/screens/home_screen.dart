@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
 class _ExamDetailScreen extends StatefulWidget {
   const _ExamDetailScreen({required this.exam, required this.onSave});
   final Exam exam;
-  final ValueChanged<Exam> onSave;
+  final Future<void> Function(Exam) onSave;
   @override
   State<_ExamDetailScreen> createState() => _ExamDetailScreenState();
 }
@@ -167,7 +167,8 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       // A changed question layout invalidates their mappings, so discard them.
       variants: List<ExamVariant>.from(variants),
     );
-    widget.onSave(updated);
+    await widget.onSave(updated);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
 
@@ -200,6 +201,12 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     );
     countController.dispose();
     if (count == null || !mounted) return;
+    if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أكمل مفتاح الإجابة لجميع الفقرات أولاً، ثم أنشئ النماذج.')),
+      );
+      return;
+    }
     try {
       final variants = ExamVariantFactory.generate(
         examId: widget.exam.id, questionTypes: questionTypes,
@@ -214,7 +221,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         variants: variants,
         );
       this.variants = List<ExamVariant>.from(variants);
-      widget.onSave(updated);
+      await widget.onSave(updated);
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تم إنشاء ${variants.length} نموذجاً وحفظ أكوادها.')),
@@ -240,19 +247,19 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         decoration: const InputDecoration(
           labelText: 'أسماء الطلاب',
           hintText: 'اسم الطالب الأول\nاسم الطالب الثاني\nاسم الطالب الثالث',
-          helperText: 'اكتب اسماً واحداً في كل سطر. سيوزّع التطبيق النماذج بالتتابع.',
+          helperText: 'اسم ثلاثي واحد في كل سطر. يقبل القوائم المرقمة، ويُوزّع نموذجاً مختلفاً لكل طالب.',
           border: OutlineInputBorder(),
         ),
       )),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
         FilledButton(onPressed: () {
-          final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+          final names = StudentNameParser.parse(namesController.text);
           if (names.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل أسماء الطلاب أولاً.')));
             return;
           }
-          if (names.any((name) => name.split(RegExp(r'\s+')).length < 3)) {
+          if (names.any((name) => !StudentNameParser.isAtLeastThreeParts(name))) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب كتابة الاسم الثلاثي لكل طالب، اسم واحد في كل سطر.')));
             return;
           }
@@ -265,7 +272,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       ],
     ));
     if (accepted != true || !mounted) { namesController.dispose(); return; }
-    final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+    final names = StudentNameParser.parse(namesController.text);
     namesController.dispose();
     try {
       if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
@@ -289,6 +296,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           AnswerSheetAssignment(
             variant: variants[i],
             studentName: names[i],
+            seatNumber: (i + 1).toString().padLeft(3, '0'),
           ),
       ];
       final bytes = await OmrSheetService.buildBatchPdf(currentExam, assignments: assignments);
