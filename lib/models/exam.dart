@@ -128,7 +128,7 @@ class ExamVariantFactory {
       final signature = questionOrder.join(',') + '|' + optionOrder.map((row) => row.join(',')).join(';');
       attempt++;
       if (!signatures.add(signature)) continue;
-      final suffix = (variants.length + 1).toString().padLeft(2, '0');
+      final suffix = (variants.length + 1).toString().padLeft(3, '0');
       final cleanId = examId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
       final prefix = cleanId.length >= 4
           ? cleanId.substring(cleanId.length - 4).toUpperCase()
