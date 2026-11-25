@@ -167,43 +167,135 @@ class _ReviewAnswersScreen extends StatefulWidget {
 }
 class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
   late List<int?> answers;
+  late final List<int> order;
   late final TextEditingController studentNameController, seatNumberController;
+
   @override
-  void initState() { super.initState(); answers = List<int?>.from(widget.readout.answers); studentNameController = TextEditingController(text: widget.readout.studentName); seatNumberController = TextEditingController(text: widget.readout.seatNumber); }
+  void initState() {
+    super.initState();
+    answers = List<int?>.from(widget.readout.answers);
+    order = List<int>.generate(answers.length, (i) => i)
+      ..sort((a, b) => _number(a).compareTo(_number(b)));
+    studentNameController = TextEditingController(text: widget.readout.studentName);
+    seatNumberController = TextEditingController(text: widget.readout.seatNumber);
+  }
+
   @override
-  void dispose() { studentNameController.dispose(); seatNumberController.dispose(); super.dispose(); }
+  void dispose() {
+    studentNameController.dispose();
+    seatNumberController.dispose();
+    super.dispose();
+  }
+
+  int _number(int question) =>
+      question < widget.readout.questionNumbers.length
+          ? widget.readout.questionNumbers[question]
+          : question + 1;
+
+  int _displayIndex(int question, int option) {
+    final mapping = widget.readout.optionDisplayIndex;
+    return question < mapping.length && option < mapping[question].length
+        ? mapping[question][option]
+        : option;
+  }
+
+  List<int> _optionsInPrintedOrder(int question) =>
+      List<int>.generate(widget.exam.optionsFor(question), (i) => i)
+        ..sort((a, b) => _displayIndex(question, a).compareTo(_displayIndex(question, b)));
+
+  String _optionLabel(int question, int option) =>
+      widget.exam.questionTypes[question] == 'tf'
+          ? (option == 0 ? 'صح' : 'خطأ')
+          : String.fromCharCode(65 + _displayIndex(question, option));
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('مراجعة الإجابات')),
     body: Column(children: [
-      Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), child: Column(children: [
-        TextField(controller: studentNameController, textDirection: TextDirection.rtl, decoration: InputDecoration(labelText: 'اسم الطالب - قراءة تلقائية', helperText: widget.readout.studentName.isEmpty ? 'لم يُقرأ الاسم بوضوح؛ يمكنك تصحيحه اختيارياً.' : 'تم استخراج الاسم من الورقة.', prefixIcon: const Icon(Icons.person_outline), border: const OutlineInputBorder())),
-        const SizedBox(height: 8),
-        TextField(controller: seatNumberController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'رقم الجلوس / الكود - قراءة تلقائية', helperText: widget.readout.seatNumber.isEmpty ? 'لم يُقرأ الرقم بوضوح.' : 'تم استخراج الرقم من الورقة.', prefixIcon: const Icon(Icons.confirmation_number_outlined), border: const OutlineInputBorder())),
-      ])),
-      Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. كود النموذج: ${widget.readout.variantCode} — الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
-      Expanded(
-        child: ListView.builder(
-          itemCount: answers.length,
-          itemBuilder: (context, i) => Card(
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              child: Row(children: [
-                SizedBox(width: 34, child: Text((i + 1).toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
-                  child: Wrap(spacing: 2, children: [
-                    ...List.generate(widget.exam.optionsFor(i), (j) => ChoiceChip(
-                      label: Text(widget.exam.questionTypes[i] == 'tf' ? (j == 0 ? 'صح' : 'خطأ') : String.fromCharCode(65 + j)),
-                      selected: answers[i] == j,
-                      onSelected: (_) => setState(() => answers[i] = j),
-                    )),
-                    ChoiceChip(label: const Text('فارغ'), selected: answers[i] == null, onSelected: (_) => setState(() => answers[i] = null)),
-                  ]),
-                ),
-              ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        child: Column(children: [
+          TextField(
+            controller: studentNameController,
+            textDirection: TextDirection.rtl,
+            decoration: InputDecoration(
+              labelText: 'اسم الطالب - قراءة تلقائية',
+              helperText: widget.readout.studentName.isEmpty
+                  ? 'لم يُقرأ الاسم بوضوح؛ يمكنك تصحيحه اختيارياً.'
+                  : 'تم استخراج الاسم من الورقة.',
+              prefixIcon: const Icon(Icons.person_outline),
+              border: const OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: seatNumberController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'رقم الجلوس / الكود - قراءة تلقائية',
+              helperText: widget.readout.seatNumber.isEmpty
+                  ? 'لم يُقرأ الرقم بوضوح.'
+                  : 'تم استخراج الرقم من الورقة.',
+              prefixIcon: const Icon(Icons.confirmation_number_outlined),
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          'راجع القراءة قبل اعتماد الدرجة. كود النموذج: ${widget.readout.variantCode} — الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.',
+          style: const TextStyle(height: 1.5),
+        ),
+      ),
+      Expanded(
+        child: ListView.builder(
+          itemCount: order.length,
+          itemBuilder: (context, index) {
+            final question = order[index];
+            final printedNumber = _number(question);
+            final unclear = widget.readout.ambiguousQuestions.contains(printedNumber);
+            return Card(
+              color: unclear ? Colors.orange.shade50 : null,
+              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Row(children: [
+                  SizedBox(
+                    width: 34,
+                    child: Text(
+                      printedNumber.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Expanded(
+                    child: Wrap(spacing: 2, children: [
+                      for (final option in _optionsInPrintedOrder(question))
+                        ChoiceChip(
+                          label: Text(_optionLabel(question, option)),
+                          selected: answers[question] == option,
+                          onSelected: (_) => setState(() => answers[question] = option),
+                        ),
+                      ChoiceChip(
+                        label: const Text('فارغ'),
+                        selected: answers[question] == null,
+                        onSelected: (_) => setState(() => answers[question] = null),
+                      ),
+                      if (unclear)
+                        const Padding(
+                          padding: EdgeInsetsDirectional.only(start: 6),
+                          child: Text(
+                            'غير واضح',
+                            style: TextStyle(color: Colors.deepOrange, fontSize: 12),
+                          ),
+                        ),
+                    ]),
+                  ),
+                ]),
+              ),
+            );
+          },
         ),
       ),
       SafeArea(
@@ -213,8 +305,14 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: () {
-                final name = studentNameController.text.trim();
-                Navigator.pop(context, _ReviewSubmission(answers: List<int?>.from(answers), studentName: name, seatNumber: seatNumberController.text.trim()));
+                Navigator.pop(
+                  context,
+                  _ReviewSubmission(
+                    answers: List<int?>.from(answers),
+                    studentName: studentNameController.text.trim(),
+                    seatNumber: seatNumberController.text.trim(),
+                  ),
+                );
               },
               child: const Text('اعتماد التصحيح وحفظ النتيجة'),
             ),
