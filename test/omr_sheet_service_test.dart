@@ -82,6 +82,7 @@ void main() {
         examId: 'tiny-exam-1234',
         questionTypes: const ['tf', 'mcq'],
         optionCount: 2,
+        answerKey: const [0, 0],
         count: 3,
       ),
       throwsA(isA<ArgumentError>().having(
@@ -94,8 +95,8 @@ void main() {
 
   test('generates 30 distinct reproducible variants and keeps the original key mapping', () {
     final types = <String>['tf', 'tf', 'mcq', 'mcq', 'mcq'];
-    final first = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, count: 30);
-    final second = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, count: 30);
+    final first = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, answerKey: const [1, 0, 2, 3, 1], count: 30);
+    final second = ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: types, optionCount: 4, answerKey: const [1, 0, 2, 3, 1], count: 30);
     expect(first.length, 30);
     expect(first.map((v) => v.code).toSet().length, 30);
     expect(first.every((v) => v.code.split('-').last.length == 3), isTrue);
@@ -144,7 +145,7 @@ void main() {
     final exam = Exam(
       id: 'exam-123456', title: 'اختبار', subject: 'علوم', questionCount: 2,
       optionCount: 4, answerKey: const [1, 2], questionTypes: const ['tf', 'mcq'],
-      variants: ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: const ['tf', 'mcq'], optionCount: 4, count: 12),
+      variants: ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: const ['tf', 'mcq'], optionCount: 4, answerKey: const [1, 2], count: 12),
     );
     final restored = Exam.fromJson(exam.toJson());
     expect(restored.variants.length, 12);
@@ -164,6 +165,7 @@ void main() {
       examId: 'mapping-test-1234',
       questionTypes: types,
       optionCount: 4,
+      answerKey: originalKey,
       count: 12,
       seed: 77,
     );
