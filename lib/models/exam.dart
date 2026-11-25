@@ -81,6 +81,36 @@ class ExamVariantFactory {
     final multipleChoiceQuestions = <int>[
       for (var i = 0; i < questionTypes.length; i++) if (questionTypes[i] == 'mcq') i,
     ];
+
+    // Calculate a capped upper bound so a small exam does not silently
+    // attempt to create more unique variants than its permutations allow.
+    int factorialCapped(int value) {
+      var result = 1;
+      for (var i = 2; i <= value; i++) {
+        result *= i;
+        if (result >= count) return count;
+      }
+      return result;
+    }
+
+    int multiplyCapped(int a, int b) {
+      if (a >= count || b >= count || a * b >= count) return count;
+      return a * b;
+    }
+
+    var maximumDistinct = multiplyCapped(
+      factorialCapped(trueFalseQuestions.length),
+      factorialCapped(multipleChoiceQuestions.length),
+    );
+    for (var i = 0; i < multipleChoiceQuestions.length && maximumDistinct < count; i++) {
+      maximumDistinct = multiplyCapped(maximumDistinct, factorialCapped(optionCount));
+    }
+    if (maximumDistinct < count) {
+      throw ArgumentError(
+        'لا يمكن إنشاء $count نموذجاً مختلفاً بهذا الاختبار؛ الحد الأقصى الممكن هو $maximumDistinct. أضف فقرات أو زد عدد الخيارات.',
+      );
+    }
+
     var attempt = 0;
     while (variants.length < count && attempt < count * 100) {
       final variantSeed = seed + attempt;
