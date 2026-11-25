@@ -247,24 +247,41 @@ class OmrScannerService {
   }
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
-    Future<String> recognize({required int top, required String fileName}) async {
-      // The printed identity rows are in the right-hand header. Keep each
-      // crop isolated to one row, then try more than one Tesseract page mode.
-      const left = 606, width = 528, height = 48;
+    String cleanName(String raw) => raw
+        .replaceAll(RegExp(r'اسم\\s*الطالب|اسم\\s*التلميذ|الطالب|التلميذ|رقم\\s*الجلوس|الجلوس|رقم'), ' ')
+        .replaceAll(RegExp(r'[^\\u0621-\\u064A\\s]'), ' ')
+        .replaceAll(RegExp(r'\\s+'), ' ')
+        .trim();
+
+    Future<String> recognize({
+      required int top,
+      required String fileName,
+      required String language,
+      bool isName = false,
+    }) async {
+      // The name and seat fields are printed on separate lines in the right
+      // header panel. Use a slightly taller crop to retain Arabic letter dots
+      // and descenders after phone-camera resampling.
+      const left = 606, width = 528, height = 56;
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
       final gray = imglib.grayscale(crop);
-      imglib.contrast(gray, contrast: 155);
-      final enlarged = imglib.copyResize(gray, width: width * 5, height: height * 5,
-          interpolation: imglib.Interpolation.cubic);
+      imglib.contrast(gray, contrast: 175);
+      final enlarged = imglib.copyResize(
+        gray,
+        width: width * 4,
+        height: height * 4,
+        interpolation: imglib.Interpolation.cubic,
+      );
       final binary = imglib.Image(width: enlarged.width, height: enlarged.height, numChannels: 3);
       for (var y = 0; y < enlarged.height; y++) {
         for (var x = 0; x < enlarged.width; x++) {
           final pixel = enlarged.getPixel(x, y);
-          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 185 ? 0 : 255;
+          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 175 ? 0 : 255;
           binary.setPixelRgb(x, y, value, value, value);
         }
       }
+
       final dir = await Directory.systemTemp.createTemp('alqadi_identity_');
       final file = File('${dir.path}/$fileName.png');
       try {
@@ -273,16 +290,32 @@ class OmrScannerService {
           await file.writeAsBytes(imglib.encodePng(image), flush: true);
           for (final pageMode in ['7', '6']) {
             final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
-              language: 'ara+eng',
+              language: language,
               engine: OCREngine.tesseract,
-              options: {'tessedit_pageseg_mode': pageMode, 'preserve_interword_spaces': '1'},
+              options: {
+                'tessedit_pageseg_mode': pageMode,
+                'preserve_interword_spaces': '1',
+              },
             ));
             candidates.add(raw.trim());
           }
         }
-        int arabicCount(String value) =>
-            RegExp(r'[\u0600-\u06FF]').allMatches(value).length;
-        candidates.sort((a, b) => arabicCount(b).compareTo(arabicCount(a)));
+
+        if (isName) {
+          candidates.sort((a, b) {
+            final cleanA = cleanName(a), cleanB = cleanName(b);
+            final lettersA = RegExp(r'[\\u0621-\\u064A]').allMatches(cleanA).length;
+            final lettersB = RegExp(r'[\\u0621-\\u064A]').allMatches(cleanB).length;
+            final wordsA = cleanA.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).length;
+            final wordsB = cleanB.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).length;
+            final scoreA = lettersA + (wordsA >= 3 ? 20 : wordsA == 2 ? 8 : 0);
+            final scoreB = lettersB + (wordsB >= 3 ? 20 : wordsB == 2 ? 8 : 0);
+            return scoreB.compareTo(scoreA);
+          });
+        } else {
+          candidates.sort((a, b) => RegExp(r'\\d').allMatches(b).length
+              .compareTo(RegExp(r'\\d').allMatches(a).length));
+        }
         return candidates.isEmpty ? '' : candidates.first;
       } finally {
         if (await dir.exists()) await dir.delete(recursive: true);
@@ -290,22 +323,32 @@ class OmrScannerService {
     }
 
     try {
-      final rawName = await recognize(top: 304, fileName: 'student_name');
-      final rawSeat = await recognize(top: 336, fileName: 'seat_number');
-      final name = rawName
-          .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب'), ' ')
-          .replaceAll(RegExp(r'[^\u0600-\u06FF\s]'), ' ')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-      final arabicLetters = RegExp(r'[\u0621-\u064A]').allMatches(name).length;
-      final digits = rawSeat.replaceAll('٠','0').replaceAll('١','1')
-          .replaceAll('٢','2').replaceAll('٣','3').replaceAll('٤','4')
-          .replaceAll('٥','5').replaceAll('٦','6').replaceAll('٧','7')
-          .replaceAll('٨','8').replaceAll('٩','9');
-      // Do not save a handful of OCR look-alike characters as a student's
-      // name. Leave it blank for manual confirmation in the review screen.
-      return (arabicLetters >= 3 ? name : '',
-          RegExp(r'\d+').firstMatch(digits)?.group(0) ?? '');
+      // Arabic-only recognition improves names; mixed Arabic/English remains
+      // useful for seat numbers that may be printed with either digit style.
+      final rawName = await recognize(
+        top: 302,
+        fileName: 'student_name',
+        language: 'ara',
+        isName: true,
+      );
+      final rawSeat = await recognize(
+        top: 334,
+        fileName: 'seat_number',
+        language: 'ara+eng',
+      );
+      final name = cleanName(rawName);
+      final arabicLetters = RegExp(r'[\\u0621-\\u064A]').allMatches(name).length;
+      final normalizedDigits = rawSeat
+          .replaceAll('٠', '0').replaceAll('١', '1')
+          .replaceAll('٢', '2').replaceAll('٣', '3')
+          .replaceAll('٤', '4').replaceAll('٥', '5')
+          .replaceAll('٦', '6').replaceAll('٧', '7')
+          .replaceAll('٨', '8').replaceAll('٩', '9');
+      // Never mistake a printed field label such as "رقم الجلوس" for a name.
+      return (
+        arabicLetters >= 4 ? name : '',
+        RegExp(r'\\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
+      );
     } catch (_) {
       return ('', '');
     }
