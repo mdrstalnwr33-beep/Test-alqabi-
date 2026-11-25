@@ -183,7 +183,7 @@ class OmrSheetService {
         'حل فقرات الصح والخطأ', true, arabic)),
       // Fixed calibration markers: same four page-corner positions as the printed reference form.
       _marker(15, 17), _marker(566, 17), _marker(566, 796), _marker(15, 796),
-      ..._questionWidgets(layoutExam, arabic),
+      ..._questionWidgets(layoutExam, arabic, variant: variant),
       pw.Positioned(left: 28, top: 816, child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.black, width: 1)),
@@ -224,7 +224,7 @@ class OmrSheetService {
   static pw.Widget _marker(double x, double y) => pw.Positioned(left: x, top: y,
       child: pw.Container(width: 14, height: 14, color: PdfColors.black));
 
-  static List<pw.Widget> _questionWidgets(Exam exam, pw.Font font) {
+  static List<pw.Widget> _questionWidgets(Exam exam, pw.Font font, {ExamVariant? variant}) {
     final tfCount = _trueFalseCount(exam);
     final mcqCount = exam.questionCount - tfCount;
     final rows = tfCount > mcqCount ? tfCount : mcqCount;
@@ -271,8 +271,12 @@ class OmrSheetService {
           child: pw.Container(width: _radius * 2, height: _radius * 2,
             decoration: pw.BoxDecoration(shape: pw.BoxShape.circle,
               border: pw.Border.all(color: PdfColors.black, width: 1.25)))));
+        final originalQuestion = variant == null ? q : variant.questionOrder[q];
+        final displayedToOriginal = variant == null
+            ? List<int>.generate(count, (i) => i)
+            : variant.optionOrder[originalQuestion];
         final label = exam.questionTypes[q] == 'tf'
-            ? (option == 0 ? 'ص' : 'خ')
+            ? (displayedToOriginal[option] == 0 ? 'ص' : 'خ')
             : String.fromCharCode(65 + option);
         widgets.add(pw.Positioned(left: cx - 4, top: y + 8,
           child: pw.Text(ArabicReshaper.instance.reshape(label), style: pw.TextStyle(font: font, fontSize: 9, fontWeight: pw.FontWeight.bold))));
