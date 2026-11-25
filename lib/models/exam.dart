@@ -155,10 +155,13 @@ class StudentNameParser {
     final normalized = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     return normalized
         .split(RegExp(r'[\n;؛]+'))
-        .map((row) => row.trim().replaceFirst(
-              RegExp(r'^\s*(?:(?:[0-9٠-٩]+)\s*[.)\-:]\s*|[•●▪\-–—]\s*)'),
-              '',
-            ).trim())
+        .map((row) {
+          var name = row.trim();
+          name = name.replaceFirst(RegExp(r'^[0-9٠-٩]+\s*[.)\-:]\s*'), '');
+          name = name.replaceFirst(RegExp(r'^[•●▪]\s*'), '');
+          name = name.replaceFirst(RegExp(r'^[-–—]\s*'), '');
+          return name.trim();
+        })
         .where((name) => name.isNotEmpty)
         .toList(growable: false);
   }
