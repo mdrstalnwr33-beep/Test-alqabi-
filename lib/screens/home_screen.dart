@@ -170,6 +170,61 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
   }
+
+  Future<void> _generateVariants() async {
+    final countController = TextEditingController(text: '30');
+    final count = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إنشاء نماذج متعددة'),
+        content: TextField(
+          controller: countController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'عدد النماذج', helperText: 'من 1 إلى 100 نموذج مختلف'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          FilledButton(
+            onPressed: () {
+              final value = int.tryParse(countController.text.trim());
+              if (value == null || value < 1 || value > 100) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل عدداً صحيحاً من 1 إلى 100.')));
+                return;
+              }
+              Navigator.pop(context, value);
+            },
+            child: const Text('إنشاء'),
+          ),
+        ],
+      ),
+    );
+    countController.dispose();
+    if (count == null || !mounted) return;
+    try {
+      final variants = ExamVariantFactory.generate(
+        examId: widget.exam.id, questionTypes: questionTypes,
+        optionCount: widget.exam.optionCount, count: count,
+      );
+      final updated = Exam(
+        id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+        questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
+        answerKey: List<int?>.from(answers), createdAt: widget.exam.createdAt,
+        questionTypes: List<String>.from(questionTypes),
+        schoolName: school.text.trim(), teacherName: teacher.text.trim(),
+        variants: variants,
+      );
+      widget.onSave(updated);
+      if (mounted) setState(() {});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم إنشاء ${variants.length} نموذجاً وحفظ أكوادها.')),
+      );
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر إنشاء النماذج: $error')),
+      );
+    }
+  }
+
   Future<Uint8List> _createSheetPdf() async {
     final currentExam = Exam(
       id: widget.exam.id,
@@ -253,7 +308,13 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
           OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.print), label: const Text('طباعة الورقة')),
+          OutlinedButton.icon(onPressed: _generateVariants, icon: const Icon(Icons.copy_all), label: const Text('إنشاء نماذج متعددة')),
         ]),
+        if (widget.exam.variants.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text('النماذج المحفوظة: ${widget.exam.variants.length} — ${widget.exam.variants.map((v) => v.code).take(6).join('، ')}${widget.exam.variants.length > 6 ? ' ...' : ''}',
+            textAlign: TextAlign.center, style: const TextStyle(color: Colors.teal, fontSize: 12)),
+        ],
       ])),
       Expanded(
         child: ListView.builder(
