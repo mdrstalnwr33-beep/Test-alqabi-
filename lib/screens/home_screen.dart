@@ -230,54 +230,57 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أنشئ النماذج أولاً قبل توزيعها على الطلاب.')));
       return;
     }
-    final nameController = TextEditingController();
-    final seatController = TextEditingController();
-    ExamVariant selected = variants.first;
-    final request = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(
-      builder: (context, refresh) => AlertDialog(
-        title: const Text('إعداد ورقة طالب'),
-        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: nameController, textDirection: TextDirection.rtl,
-            decoration: const InputDecoration(labelText: 'اسم الطالب الثلاثي')),
-          TextField(controller: seatController, keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'رقم الجلوس')),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<ExamVariant>(
-            value: selected,
-            decoration: const InputDecoration(labelText: 'نموذج الاختبار'),
-            items: variants.map((v) => DropdownMenuItem(value: v, child: Text(v.code))).toList(),
-            onChanged: (v) { if (v != null) refresh(() => selected = v); },
-          ),
-        ])),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () {
-            if (nameController.text.trim().split(RegExp(r'\\s+')).length < 3) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل اسم الطالب ثلاثياً.')));
-              return;
-            }
-            Navigator.pop(context, true);
-          }, child: const Text('إنشاء PDF')),
-        ],
-      ),
+    final namesController = TextEditingController();
+    final accepted = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('أسماء الطلاب وتوزيع النماذج'),
+      content: SizedBox(width: 420, child: TextField(
+        controller: namesController, minLines: 5, maxLines: 10,
+        textDirection: TextDirection.rtl,
+        decoration: const InputDecoration(
+          labelText: 'أسماء الطلاب',
+          hintText: 'اسم الطالب الأول\nاسم الطالب الثاني\nاسم الطالب الثالث',
+          helperText: 'اكتب اسماً واحداً في كل سطر. سيوزّع التطبيق النماذج بالتتابع.',
+          border: OutlineInputBorder(),
+        ),
+      )),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+        FilledButton(onPressed: () {
+          final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+          if (names.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل أسماء الطلاب أولاً.')));
+            return;
+          }
+          Navigator.pop(context, true);
+        }, child: const Text('إنشاء أوراق الطلاب')),
+      ],
     ));
-    if (request == true && mounted) {
-      try {
+    if (accepted != true || !mounted) { namesController.dispose(); return; }
+    final names = namesController.text.split(RegExp(r'\n')).map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+    namesController.dispose();
+    try {
+      final directory = await getTemporaryDirectory();
+      final files = <XFile>[];
+      for (var i = 0; i < names.length; i++) {
+        final variant = variants[i % variants.length];
         final bytes = await OmrSheetService.buildPdf(
           Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
             questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
             answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes),
             schoolName: school.text.trim(), teacherName: teacher.text.trim()),
-          variant: selected, studentName: nameController.text.trim(), seatNumber: seatController.text.trim(),
+          variant: variant, studentName: names[i],
         );
-        await Printing.sharePdf(bytes: bytes,
-          filename: 'OMR-${selected.code}-${seatController.text.trim().isEmpty ? 'student' : seatController.text.trim()}.pdf');
-      } catch (error) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء ورقة الطالب: $error')));
+        final safeIndex = (i + 1).toString().padLeft(3, '0');
+        final file = File('${directory.path}/alqadi_${safeIndex}_${variant.code}.pdf');
+        await file.writeAsBytes(bytes, flush: true);
+        files.add(XFile(file.path, mimeType: 'application/pdf'));
       }
+      if (files.isNotEmpty) {
+        await Share.shareXFiles(files, text: 'أوراق إجابة الطلاب — ${names.length} طالباً');
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تجهيز أوراق الطلاب: $error')));
     }
-    nameController.dispose();
-    seatController.dispose();
   }
 
   Future<Uint8List> _createSheetPdf() async {
