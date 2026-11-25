@@ -3,6 +3,15 @@ import 'package:alqadi_smart_exam_checker/models/exam.dart';
 import 'package:alqadi_smart_exam_checker/services/omr_sheet_service.dart';
 
 void main() {
+  test('student names are parsed from pasted numbered class lists', () {
+    expect(
+      StudentNameParser.parse('١- محمد أحمد علي\\r\\n2. خالد حسن صالح\\n\\n• سالم يحيى قاسم; فهد علي ناصر'),
+      ['محمد أحمد علي', 'خالد حسن صالح', 'سالم يحيى قاسم', 'فهد علي ناصر'],
+    );
+    expect(StudentNameParser.isAtLeastThreeParts('محمد أحمد علي'), isTrue);
+    expect(StudentNameParser.isAtLeastThreeParts('محمد أحمد'), isFalse);
+  });
+
   test('all OMR bubble centers remain inside the A4 page', () {
     final exam = Exam(
       id: 'test-form-123456',
