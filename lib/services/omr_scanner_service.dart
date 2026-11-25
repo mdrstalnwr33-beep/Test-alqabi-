@@ -210,8 +210,11 @@ class OmrScannerService {
       }
     }
     try {
-      final rawName = await recognize(top: 674, fileName: 'student_name');
-      final rawSeat = await recognize(top: 704, fileName: 'seat_number');
+      // The identity fields are inside the header near the top of the page.
+      // The previous 674/704px crops were far below the header and therefore
+      // read blank paper instead of the printed student name and seat number.
+      final rawName = await recognize(top: 304, fileName: 'student_name');
+      final rawSeat = await recognize(top: 336, fileName: 'seat_number');
       final name = rawName
           .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب|[_ـ:：]'), ' ')
           .replaceAll(RegExp(r'\s+'), ' ').trim();
