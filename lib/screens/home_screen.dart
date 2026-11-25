@@ -251,6 +251,14 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل أسماء الطلاب أولاً.')));
             return;
           }
+          if (names.any((name) => name.split(RegExp(r'\s+')).length < 3)) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب كتابة الاسم الثلاثي لكل طالب، اسم واحد في كل سطر.')));
+            return;
+          }
+          if (names.length > variants.length) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('عدد الطلاب ${names.length} أكبر من عدد النماذج ${variants.length}. أنشئ نماذج أكثر حتى يحصل كل طالب على نموذج مختلف.')));
+            return;
+          }
           Navigator.pop(context, true);
         }, child: const Text('إنشاء أوراق الطلاب')),
       ],
