@@ -90,12 +90,27 @@ class _ScanScreenState extends State<ScanScreen> {
           incorrect++;
         }
       }
+      final savedCorrectAnswers = List<int?>.filled(exam.questionCount, null);
+      if (readout.variantCode == 'BASE') {
+        for (var q = 0; q < exam.questionCount; q++) { savedCorrectAnswers[q] = exam.answerKey[q]; }
+      } else {
+        final savedVariant = exam.variants.firstWhere((v) => v.code == readout.variantCode);
+        for (var displayedQ = 0; displayedQ < savedVariant.questionOrder.length; displayedQ++) {
+          final originalQ = savedVariant.questionOrder[displayedQ];
+          final displayedCorrect = variantKey[displayedQ];
+          if (displayedCorrect != null && displayedCorrect >= 0 && displayedCorrect < savedVariant.optionOrder[originalQ].length) {
+            savedCorrectAnswers[originalQ] = savedVariant.optionOrder[originalQ][displayedCorrect];
+          }
+        }
+      }
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
         studentName: review.studentName.isEmpty ? 'غير مقروء' : review.studentName,
         seatNumber: review.seatNumber,
         variantCode: readout.variantCode,
-        responses: reviewed, correct: correct, incorrect: incorrect, unanswered: unanswered,
+        responses: reviewed, correctAnswers: savedCorrectAnswers,
+        questionTypes: List<String>.from(exam.questionTypes),
+        correct: correct, incorrect: incorrect, unanswered: unanswered,
         ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
       );
       widget.onResult(result);
