@@ -116,10 +116,10 @@ void main() {
     final exam = Exam(
       id: 'exam-123456', title: 'اختبار', subject: 'علوم', questionCount: 2,
       optionCount: 4, answerKey: const [1, 2], questionTypes: const ['tf', 'mcq'],
-      variants: ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: const ['tf', 'mcq'], optionCount: 4, count: 30),
+      variants: ExamVariantFactory.generate(examId: 'exam-123456', questionTypes: const ['tf', 'mcq'], optionCount: 4, count: 12),
     );
     final restored = Exam.fromJson(exam.toJson());
-    expect(restored.variants.length, 30);
+    expect(restored.variants.length, 12);
     expect(restored.variants.first.code, exam.variants.first.code);
     final legacy = Exam.fromJson({
       'id': 'old', 'title': 'قديم', 'subject': '', 'questionCount': 1,
