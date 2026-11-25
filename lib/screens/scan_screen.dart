@@ -56,12 +56,39 @@ class _ScanScreenState extends State<ScanScreen> {
       )));
       if (review == null || !mounted) return;
       final reviewed = review.answers;
+      final variantKey = readout.variantAnswerKey;
+      final questionOrder = readout.questionOrder;
+      if (variantKey.length != exam.questionCount ||
+          questionOrder.length != exam.questionCount ||
+          readout.optionDisplayIndex.length != exam.questionCount) {
+        throw StateError('مفتاح النموذج غير مكتمل أو لا يطابق ترتيب الأسئلة. أوقف التصحيح لحماية الدرجة.');
+      }
       var correct = 0, incorrect = 0, unanswered = 0;
-      for (var i = 0; i < reviewed.length; i++) {
-        final answer = reviewed[i];
-        if (answer == null) { unanswered++; }
-        else if (answer == exam.answerKey[i]) { correct++; }
-        else { incorrect++; }
+      // Review answers are kept in original exam order for editing. Convert
+      // each reviewed response back to this scanned variant's displayed
+      // question/option indexes, then compare only with that variant's key.
+      for (var displayedQ = 0; displayedQ < questionOrder.length; displayedQ++) {
+        final originalQ = questionOrder[displayedQ];
+        if (originalQ < 0 || originalQ >= reviewed.length) {
+          throw StateError('ترتيب أسئلة النموذج غير صالح. لم يتم اعتماد الدرجة.');
+        }
+        final originalAnswer = reviewed[originalQ];
+        if (originalAnswer == null) {
+          unanswered++;
+          continue;
+        }
+        final optionMap = readout.optionDisplayIndex[originalQ];
+        final displayedAnswer = originalAnswer < 0 || originalAnswer >= optionMap.length
+            ? -1
+            : optionMap[originalAnswer];
+        if (displayedAnswer < 0 || displayedAnswer >= (exam.questionTypes[originalQ] == 'tf' ? 2 : exam.optionCount)) {
+          throw StateError('ترتيب خيارات النموذج غير صالح. لم يتم اعتماد الدرجة.');
+        }
+        if (displayedAnswer == variantKey[displayedQ]) {
+          correct++;
+        } else {
+          incorrect++;
+        }
       }
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
