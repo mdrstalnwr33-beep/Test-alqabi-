@@ -124,7 +124,7 @@ class StudentNameParser {
   static List<String> parse(String input) {
     final normalized = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     return normalized
-        .split(RegExp(r'[\n;]+'))
+        .split(RegExp(r'[\n;؛]+'))
         .map((row) => row.trim().replaceFirst(
               RegExp(r'^\s*(?:(?:[0-9٠-٩]+)\s*[.)\-:]\s*|[•●▪\-–—]\s*)'),
               '',
