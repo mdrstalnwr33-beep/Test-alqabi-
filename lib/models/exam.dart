@@ -1,12 +1,15 @@
 import 'dart:math';
 
 class ExamVariant {
-  ExamVariant({required this.code, required this.questionOrder, required this.optionOrder, this.seed = 0});
+  ExamVariant({required this.code, required this.questionOrder, required this.optionOrder, this.displayedAnswerKey = const [], this.seed = 0});
   final String code;
   /// Original question indexes in the order printed on this variant.
   final List<int> questionOrder;
   /// For each original question, maps displayed option index to original option index.
   final List<List<int>> optionOrder;
+  /// Correct option indexes in the displayed question/option order for this variant.
+  /// Older saved variants without this field are upgraded from the base key at use time.
+  final List<int?> displayedAnswerKey;
   final int seed;
 
   int? originalQuestionForDisplayed(int displayedQuestion) {
@@ -31,6 +34,22 @@ class ExamVariant {
     return index < 0 ? null : index;
   }
 
+  List<int?> buildDisplayedAnswerKey(List<int?> originalAnswerKey) =>
+      List<int?>.generate(questionOrder.length, (q) => getDisplayedAnswer(q, originalAnswerKey));
+
+  List<int?> getAnswerKey(List<int?> originalAnswerKey) =>
+      displayedAnswerKey.length == questionOrder.length
+          ? List<int?>.from(displayedAnswerKey)
+          : buildDisplayedAnswerKey(originalAnswerKey);
+
+  ExamVariant withAnswerKey(List<int?> originalAnswerKey) => ExamVariant(
+    code: code,
+    questionOrder: List<int>.from(questionOrder),
+    optionOrder: optionOrder.map((row) => List<int>.from(row)).toList(),
+    displayedAnswerKey: buildDisplayedAnswerKey(originalAnswerKey),
+    seed: seed,
+  );
+
   /// Converts answers read in the printed variant order back to the source exam order.
   List<int?> mapDisplayedAnswersToOriginal(List<int?> displayedAnswers) {
     if (displayedAnswers.length != questionOrder.length) {
@@ -48,13 +67,15 @@ class ExamVariant {
   }
 
   Map<String, dynamic> toJson() => {
-    'code': code, 'questionOrder': questionOrder, 'optionOrder': optionOrder, 'seed': seed,
+    'code': code, 'questionOrder': questionOrder, 'optionOrder': optionOrder,
+    'displayedAnswerKey': displayedAnswerKey, 'seed': seed,
   };
 
   factory ExamVariant.fromJson(Map<String, dynamic> json) => ExamVariant(
     code: json['code'] as String,
     questionOrder: (json['questionOrder'] as List).map((v) => v as int).toList(),
     optionOrder: (json['optionOrder'] as List).map((row) => (row as List).map((v) => v as int).toList()).toList(),
+    displayedAnswerKey: (json['displayedAnswerKey'] as List?)?.map((v) => v == null ? null : v as int).toList() ?? const [],
     seed: (json['seed'] ?? 0) as int,
   );
 }
@@ -64,11 +85,13 @@ class ExamVariantFactory {
     required String examId,
     required List<String> questionTypes,
     required int optionCount,
+    required List<int?> answerKey,
     int count = 30,
     int seed = 20261125,
   }) {
     if (count < 1 || count > 100) throw ArgumentError.value(count, 'count', 'يجب أن يكون بين 1 و100');
-    if (questionTypes.isEmpty || optionCount < 2 || optionCount > 5 ||
+    if (questionTypes.isEmpty || answerKey.length != questionTypes.length ||
+        answerKey.any((answer) => answer == null) || optionCount < 2 || optionCount > 5 ||
         questionTypes.any((type) => type != 'tf' && type != 'mcq')) {
       throw ArgumentError('بيانات الاختبار غير صالحة لإنشاء النماذج.');
     }
@@ -138,7 +161,7 @@ class ExamVariantFactory {
         questionOrder: questionOrder,
         optionOrder: optionOrder,
         seed: variantSeed,
-      ));
+      ).withAnswerKey(answerKey));
     }
     if (variants.length != count) {
       throw StateError('تعذر إنشاء العدد المطلوب من النماذج المختلفة. جرّب عدداً أقل.');
