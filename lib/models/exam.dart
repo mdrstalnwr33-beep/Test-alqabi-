@@ -38,7 +38,8 @@ class ExamVariant {
       List<int?>.generate(questionOrder.length, (q) => getDisplayedAnswer(q, originalAnswerKey));
 
   List<int?> getAnswerKey(List<int?> originalAnswerKey) =>
-      displayedAnswerKey.length == questionOrder.length
+      displayedAnswerKey.length == questionOrder.length &&
+              displayedAnswerKey.every((answer) => answer != null)
           ? List<int?>.from(displayedAnswerKey)
           : buildDisplayedAnswerKey(originalAnswerKey);
 
