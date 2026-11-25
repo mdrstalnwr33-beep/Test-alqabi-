@@ -104,4 +104,27 @@ void main() {
     expect(legacy.variants, isEmpty);
   });
 
+
+  test('variant question order preserves TF-first layout and maps student answers to original key positions', () {
+    const types = <String>['mcq', 'tf', 'mcq', 'tf'];
+    const originalKey = <int?>[2, 1, 0, 0];
+    final variants = ExamVariantFactory.generate(
+      examId: 'mapping-test-1234',
+      questionTypes: types,
+      optionCount: 4,
+      count: 12,
+      seed: 77,
+    );
+    for (final variant in variants) {
+      expect(variant.questionOrder.take(2).toSet(), <int>{1, 3});
+      expect(variant.questionOrder.skip(2).toSet(), <int>{0, 2});
+      final displayedCorrect = List<int?>.generate(
+        types.length,
+        (displayedQ) => variant.getDisplayedAnswer(displayedQ, originalKey),
+      );
+      final mappedBack = variant.mapDisplayedAnswersToOriginal(displayedCorrect);
+      expect(mappedBack, originalKey);
+    }
+  });
+
 }
