@@ -102,6 +102,38 @@ void main() {
     expect(result.ambiguousQuestions, [2]);
   });
 
+  test('maps a shuffled variant correctly when OCR appends one extra code digit', () async {
+    final base = makeExam();
+    final variant = ExamVariantFactory.generate(
+      examId: base.id,
+      questionTypes: base.questionTypes,
+      optionCount: base.optionCount,
+      count: 1,
+    ).single;
+    final exam = base.copyWith(variants: [variant]);
+    final layoutExam = exam.copyWith(
+      questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
+    );
+    final image = blankSheet();
+    for (var displayedQuestion = 0; displayedQuestion < exam.questionCount; displayedQuestion++) {
+      final displayedAnswer = variant.getDisplayedAnswer(displayedQuestion, exam.answerKey);
+      shade(image, layoutExam, displayedQuestion, displayedAnswer!);
+    }
+    final codeWithOcrNoise = '${variant.code}7';
+    final variantScanner = OmrScannerService(
+      identityReader: (_) async => ('', ''),
+      variantCodeReader: (_) async => codeWithOcrNoise,
+    );
+
+    final result = await variantScanner.scan(
+      imageBytes: imglib.encodePng(image),
+      corners: corners(),
+      exam: exam,
+    );
+
+    expect(result.answers, exam.answerKey);
+  });
+
   test('rejects corners supplied in the wrong order', () async {
     final image = blankSheet();
     await expectLater(
