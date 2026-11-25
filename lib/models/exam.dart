@@ -117,6 +117,26 @@ class ExamVariantFactory {
   }
 }
 
+/// Parses a pasted class list without splitting the words that form a name.
+/// One student per line is the primary format; numbered and semicolon-separated
+/// lists are also accepted.
+class StudentNameParser {
+  static List<String> parse(String input) {
+    final normalized = input.replaceAll('\\r\\n', '\\n').replaceAll('\\r', '\\n');
+    return normalized
+        .split(RegExp(r'[\\n;]+'))
+        .map((row) => row.trim().replaceFirst(
+              RegExp(r'^\\s*(?:(?:[0-9٠-٩]+)\\s*[.)\\-:]\\s*|[•●▪\\-–—]\\s*)'),
+              '',
+            ).trim())
+        .where((name) => name.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  static bool isAtLeastThreeParts(String name) =>
+      name.trim().split(RegExp(r'\\s+')).where((part) => part.isNotEmpty).length >= 3;
+}
+
 class ExamQuestion {
   const ExamQuestion({required this.text, List<String>? options})
       : options = options ?? const <String>[];
@@ -141,6 +161,31 @@ class Exam {
   final List<ExamVariant> variants;
   final List<ExamQuestion> questions;
   int optionsFor(int index) => index < questionTypes.length && questionTypes[index] == 'tf' ? 2 : optionCount;
+  Exam copyWith({
+    String? title,
+    String? subject,
+    List<int?>? answerKey,
+    List<String>? questionTypes,
+    String? schoolName,
+    String? teacherName,
+    String? termName,
+    List<ExamVariant>? variants,
+    List<ExamQuestion>? questions,
+  }) => Exam(
+    id: id,
+    title: title ?? this.title,
+    subject: subject ?? this.subject,
+    questionCount: questionCount,
+    optionCount: optionCount,
+    answerKey: answerKey ?? this.answerKey,
+    createdAt: createdAt,
+    questionTypes: questionTypes ?? this.questionTypes,
+    schoolName: schoolName ?? this.schoolName,
+    teacherName: teacherName ?? this.teacherName,
+    termName: termName ?? this.termName,
+    variants: variants ?? this.variants,
+    questions: questions ?? this.questions,
+  );
   bool get hasAnswerKey => answerKey.length == questionCount && answerKey.every((v) => v != null);
   Map<String, dynamic> toJson() => {
     'id': id, 'title': title, 'subject': subject, 'questionCount': questionCount, 'optionCount': optionCount,
