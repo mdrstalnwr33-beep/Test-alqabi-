@@ -155,11 +155,66 @@ class _HomeScreenState extends State<HomeScreen> {
     )),
   ]);
   Widget _stat(String label, String value, IconData icon) => Expanded(child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: const Color(0xFF12A89D)), const SizedBox(height: 8), Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), Text(label, style: const TextStyle(color: Colors.black54))])));
+  String _answerLabel(int? answer, String type) {
+    if (answer == null) return 'فارغ';
+    if (type == 'tf') return answer == 0 ? 'صح' : 'خطأ';
+    return String.fromCharCode(65 + answer);
+  }
+
+  Future<void> _showResultDetails(ExamResult result) async {
+    final hasKey = result.correctAnswers.length == result.responses.length;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('تفاصيل التصحيح — ${result.studentName}'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('الاختبار: ${result.examTitle}'),
+                Text('كود النموذج: ${result.variantCode.isEmpty ? 'BASE' : result.variantCode}'),
+                Text('رقم الجلوس: ${result.seatNumber.isEmpty ? 'غير مقروء' : result.seatNumber}'),
+                Text('الدرجة: ${result.correct}/${result.total}'),
+                const Divider(),
+                if (!hasKey)
+                  const Text('هذه نتيجة قديمة؛ لم يكن التطبيق يحفظ مفتاح الإجابة المستخدم وقت التصحيح. لا يمكن عرض الإجابة الصحيحة لهذه النتيجة بأثر رجعي.', style: TextStyle(color: Colors.deepOrange))
+                else
+                  for (var i = 0; i < result.responses.length; i++)
+                    Builder(builder: (context) {
+                      final type = i < result.questionTypes.length ? result.questionTypes[i] : 'mcq';
+                      final student = result.responses[i];
+                      final key = result.correctAnswers[i];
+                      final isCorrect = student != null && key != null && student == key;
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        color: student == null ? Colors.orange.shade50 : (isCorrect ? Colors.green.shade50 : Colors.red.shade50),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          child: Row(children: [
+                            SizedBox(width: 34, child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.bold))),
+                            Expanded(child: Text('إجابة الطالب: ${_answerLabel(student, type)}')),
+                            Expanded(child: Text('الصحيح: ${_answerLabel(key, type)}')),
+                            Icon(student == null ? Icons.help_outline : (isCorrect ? Icons.check_circle : Icons.cancel), color: student == null ? Colors.orange : (isCorrect ? Colors.green : Colors.red), size: 20),
+                          ]),
+                        ),
+                      );
+                    }),
+              ],
+            ),
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ),
+    );
+  }
+
   Widget _resultsPage() {
     if (results.isEmpty) return const Center(child: Text('لا توجد نتائج بعد. صحّح أول ورقة لتظهر النتائج هنا.'));
     return ListView(padding: const EdgeInsets.all(16), children: [
       Row(children: [const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))), IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); final dir = await getTemporaryDirectory(); final file = File('${dir.path}/alqadi-results.csv'); await file.writeAsBytes(bytes, flush: true); await Share.shareXFiles([XFile(file.path)], text: 'نتائج اختبارات القاضي الذكي'); }, icon: const Icon(Icons.table_view))]),
-      ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16)), trailing: Text(r.incorrect.toString() + ' خطأ')))),
+      ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)), trailing: Text(r.incorrect.toString() + ' خطأ'), onTap: () => _showResultDetails(r)))),
     ]);
   }
   Widget _settingsPage() => ListView(padding: const EdgeInsets.all(18), children: const [
