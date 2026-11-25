@@ -88,7 +88,7 @@ void main() {
       throwsA(isA<ArgumentError>().having(
         (error) => error.message.toString(),
         'message',
-        contains('الحد الأقصى الممكن هو 2'),
+        contains('الحد الأقصى الممكن هو 4'),
       )),
     );
   });
@@ -122,6 +122,30 @@ void main() {
       }
     }
     expect(originalKey, <int?>[1, 0, 2, 3, 1]);
+  });
+
+  test('true-false answer positions vary even when the source key is identical', () {
+    const types = <String>['tf', 'tf', 'tf', 'tf', 'tf', 'tf', 'tf', 'tf', 'tf', 'tf'];
+    const originalKey = <int?>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    final variants = ExamVariantFactory.generate(
+      examId: 'true-false-shuffle-0612',
+      questionTypes: types,
+      optionCount: 4,
+      answerKey: originalKey,
+      count: 30,
+      seed: 612,
+    );
+    expect(variants.map((v) => v.optionOrder.map((row) => row.join()).join()).toSet().length,
+        greaterThan(1));
+    expect(variants.map((v) => v.displayedAnswerKey.join()).toSet().length,
+        greaterThan(1));
+    for (final variant in variants) {
+      for (var displayedQ = 0; displayedQ < types.length; displayedQ++) {
+        final originalQ = variant.questionOrder[displayedQ];
+        final displayedCorrect = variant.getDisplayedAnswer(displayedQ, originalKey)!;
+        expect(variant.optionOrder[originalQ][displayedCorrect], 1);
+      }
+    }
   });
 
   test('exam question text and choices survive JSON serialization', () {
