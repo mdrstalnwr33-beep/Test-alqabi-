@@ -177,7 +177,7 @@ class OmrScannerService {
       ));
       final normalized = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9-]'), '');
       if (normalized.contains('BASE')) return 'BASE';
-      final match = RegExp(r'Q[A-Z0-9]{4}-[0-9]{2}').firstMatch(normalized);
+      final match = RegExp(r'Q[A-Z0-9]{4}-[0-9]{2,3}').firstMatch(normalized);
       return match?.group(0) ?? '';
     } finally {
       if (await dir.exists()) await dir.delete(recursive: true);
