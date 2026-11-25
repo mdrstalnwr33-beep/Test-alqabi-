@@ -108,6 +108,7 @@ void main() {
       examId: base.id,
       questionTypes: base.questionTypes,
       optionCount: base.optionCount,
+      answerKey: base.answerKey,
       count: 1,
     ).single;
     final exam = base.copyWith(variants: [variant]);
@@ -135,6 +136,7 @@ void main() {
       examId: base.id,
       questionTypes: base.questionTypes,
       optionCount: base.optionCount,
+      answerKey: base.answerKey,
       count: 1,
     ).single;
     final exam = base.copyWith(variants: [variant]);
@@ -160,6 +162,8 @@ void main() {
 
     expect(result.answers, exam.answerKey);
     expect(result.variantCode, variant.code);
+    expect(result.questionOrder, variant.questionOrder);
+    expect(result.variantAnswerKey, variant.getAnswerKey(exam.answerKey));
     for (var originalQuestion = 0; originalQuestion < exam.questionCount; originalQuestion++) {
       expect(
         result.questionNumbers[originalQuestion],
@@ -173,6 +177,28 @@ void main() {
         ),
       );
     }
+  });
+
+  test('stores a distinct transformed answer key for each generated variant', () {
+    final base = makeExam();
+    final variants = ExamVariantFactory.generate(
+      examId: base.id,
+      questionTypes: base.questionTypes,
+      optionCount: base.optionCount,
+      answerKey: base.answerKey,
+      count: 2,
+    );
+
+    expect(variants, hasLength(2));
+    for (final variant in variants) {
+      expect(variant.displayedAnswerKey, hasLength(base.questionCount));
+      expect(variant.displayedAnswerKey, variant.buildDisplayedAnswerKey(base.answerKey));
+      final restored = variant.mapDisplayedAnswersToOriginal(variant.displayedAnswerKey);
+      expect(restored, base.answerKey);
+      final saved = ExamVariant.fromJson(variant.toJson());
+      expect(saved.displayedAnswerKey, variant.displayedAnswerKey);
+    }
+    expect(variants.map((v) => v.code).toSet(), hasLength(2));
   });
 
   test('rejects corners supplied in the wrong order', () async {
