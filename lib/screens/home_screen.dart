@@ -156,8 +156,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
-    final sameQuestionLayout = questionTypes.length == widget.exam.questionTypes.length &&
-        List<bool>.generate(questionTypes.length, (i) => questionTypes[i] == widget.exam.questionTypes[i]).every((v) => v);
     final updated = Exam(
       id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
       questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
