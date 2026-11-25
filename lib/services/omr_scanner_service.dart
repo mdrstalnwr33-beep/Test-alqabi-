@@ -125,7 +125,10 @@ class OmrScannerService {
     final identity = await (_identityReader?.call(warped) ?? _readStudentIdentity(warped));
     var variantCode = await (_variantCodeReader?.call(warped) ?? _readVariantCode(warped));
     ExamVariant? variant;
-    if (exam.variants.isNotEmpty) {
+    // A plain BASE sheet remains valid even after shuffled variants are created.
+    if (variantCode == 'BASE') {
+      variant = null;
+    } else if (exam.variants.isNotEmpty) {
       if (variantCode.isEmpty) throw StateError('تعذر قراءة كود النموذج؛ أعد تصوير الورقة بوضوح. لم يتم التصحيح.');
       for (final candidate in exam.variants) {
         if (candidate.code == variantCode) { variant = candidate; break; }
@@ -141,7 +144,7 @@ class OmrScannerService {
       if (variant == null) throw StateError('كود النموذج غير مسجل في هذا الاختبار: $variantCode. أوقف التصحيح لحماية النتيجة.');
       // Store and display the canonical registered code, not the noisy OCR text.
       variantCode = variant.code;
-    } else if (variantCode.isNotEmpty && variantCode != 'BASE') {
+    } else if (variantCode.isNotEmpty) {
       throw StateError('كود الورقة لا يطابق الاختبار المحدد.');
     }
     final layoutExam = variant == null ? exam : Exam(
