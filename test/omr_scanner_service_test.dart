@@ -132,6 +132,7 @@ void main() {
     );
 
     expect(result.answers, exam.answerKey);
+    expect(result.variantCode, variant.code);
   });
 
   test('rejects corners supplied in the wrong order', () async {
