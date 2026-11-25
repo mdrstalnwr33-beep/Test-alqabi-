@@ -5,7 +5,7 @@ import 'package:alqadi_smart_exam_checker/services/omr_sheet_service.dart';
 void main() {
   test('student names are parsed from pasted numbered class lists', () {
     expect(
-      StudentNameParser.parse('١- محمد أحمد علي\\r\\n2. خالد حسن صالح\\n\\n• سالم يحيى قاسم; فهد علي ناصر'),
+      StudentNameParser.parse('١- محمد أحمد علي\r\n2. خالد حسن صالح\n\n• سالم يحيى قاسم; فهد علي ناصر'),
       ['محمد أحمد علي', 'خالد حسن صالح', 'سالم يحيى قاسم', 'فهد علي ناصر'],
     );
     expect(StudentNameParser.isAtLeastThreeParts('محمد أحمد علي'), isTrue);
