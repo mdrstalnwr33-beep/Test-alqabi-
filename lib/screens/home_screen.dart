@@ -225,6 +225,61 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     }
   }
 
+  Future<void> _printNamedVariant() async {
+    if (variants.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أنشئ النماذج أولاً قبل توزيعها على الطلاب.')));
+      return;
+    }
+    final nameController = TextEditingController();
+    final seatController = TextEditingController();
+    ExamVariant selected = variants.first;
+    final request = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(
+      builder: (context, refresh) => AlertDialog(
+        title: const Text('إعداد ورقة طالب'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: nameController, textDirection: TextDirection.rtl,
+            decoration: const InputDecoration(labelText: 'اسم الطالب الثلاثي')),
+          TextField(controller: seatController, keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'رقم الجلوس')),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<ExamVariant>(
+            value: selected,
+            decoration: const InputDecoration(labelText: 'نموذج الاختبار'),
+            items: variants.map((v) => DropdownMenuItem(value: v, child: Text(v.code))).toList(),
+            onChanged: (v) { if (v != null) refresh(() => selected = v); },
+          ),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () {
+            if (nameController.text.trim().split(RegExp(r'\\s+')).length < 3) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل اسم الطالب ثلاثياً.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          }, child: const Text('إنشاء PDF')),
+        ],
+      ),
+    ));
+    if (request == true && mounted) {
+      try {
+        final bytes = await OmrSheetService.buildPdf(
+          Exam(id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+            questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
+            answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes),
+            schoolName: school.text.trim(), teacherName: teacher.text.trim()),
+          variant: selected, studentName: nameController.text.trim(), seatNumber: seatController.text.trim(),
+        );
+        await Printing.sharePdf(bytes: bytes,
+          filename: 'OMR-${selected.code}-${seatController.text.trim().isEmpty ? 'student' : seatController.text.trim()}.pdf');
+      } catch (error) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء ورقة الطالب: $error')));
+      }
+    }
+    nameController.dispose();
+    seatController.dispose();
+  }
+
   Future<Uint8List> _createSheetPdf() async {
     final currentExam = Exam(
       id: widget.exam.id,
@@ -309,6 +364,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
           OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.print), label: const Text('طباعة الورقة')),
           OutlinedButton.icon(onPressed: _generateVariants, icon: const Icon(Icons.copy_all), label: const Text('إنشاء نماذج متعددة')),
+          OutlinedButton.icon(onPressed: _printNamedVariant, icon: const Icon(Icons.person_add_alt_1), label: const Text('ورقة طالب باسمه')),
         ]),
         if (variants.isNotEmpty) ...[
           const SizedBox(height: 8),
