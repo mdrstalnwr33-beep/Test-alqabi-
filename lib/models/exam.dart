@@ -91,6 +91,8 @@ class ExamVariantFactory {
       final questionOrder = [...tfOrder, ...mcqOrder];
       final optionOrder = List<List<int>>.generate(questionTypes.length, (q) {
         final n = questionTypes[q] == 'tf' ? 2 : optionCount;
+        // Keep true/false semantics fixed so the printed labels remain correct.
+        if (questionTypes[q] == 'tf') return List<int>.generate(n, (i) => i);
         return List<int>.generate(n, (i) => i)..shuffle(random);
       });
       final signature = questionOrder.join(',') + '|' + optionOrder.map((row) => row.join(',')).join(';');
