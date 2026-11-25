@@ -247,6 +247,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         questionTypes: List<String>.from(questionTypes),
         schoolName: school.text.trim(), teacherName: teacher.text.trim(),
         variants: variants,
+        questions: List<ExamQuestion>.from(questions),
       );
       this.variants = List<ExamVariant>.from(variants);
       widget.onSave(updated);
@@ -448,6 +449,11 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                         ],
                         onChanged: (v) => setState(() {
                           questionTypes[i] = v!;
+                          final newCount = v == 'tf' ? 2 : widget.exam.optionCount;
+                          questions[i] = ExamQuestion(
+                            text: questions[i].text,
+                            options: List<String>.generate(newCount, (j) => j < questions[i].options.length ? questions[i].options[j] : (v == 'tf' ? (j == 0 ? 'صح' : 'خطأ') : '')),
+                          );
                           variants.clear();
                           if (answers[i] != null && answers[i]! >= (v == 'tf' ? 2 : widget.exam.optionCount)) {
                             answers[i] = null;
