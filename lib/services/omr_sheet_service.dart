@@ -86,6 +86,13 @@ class OmrSheetService {
       throw StateError('تعذر قراءة شعار الأستاذ محمد القاضي.');
     }
     final logoPngBytes = Uint8List.fromList(img.encodePng(logoImage));
+    final assignedCodes = assignments
+        .map((assignment) => assignment.variant?.code)
+        .whereType<String>()
+        .toList();
+    if (assignedCodes.toSet().length != assignedCodes.length) {
+      throw ArgumentError('لا يمكن توزيع النموذج نفسه على أكثر من طالب في الدفعة الواحدة.');
+    }
     for (final assignment in assignments) {
       final variant = assignment.variant;
       final studentName = assignment.studentName;
@@ -98,6 +105,9 @@ class OmrSheetService {
         schoolName: exam.schoolName, teacherName: exam.teacherName,
       );
       if (variant != null) {
+        if (!exam.variants.any((saved) => saved.code == variant.code)) {
+          throw ArgumentError('كود النموذج غير محفوظ ضمن هذا الاختبار: ${variant.code}');
+        }
         if (studentName.trim().isEmpty) {
           throw ArgumentError('اسم الطالب مطلوب لكل ورقة نموذج مخصصة.');
         }
