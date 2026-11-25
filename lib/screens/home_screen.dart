@@ -217,10 +217,40 @@ class _HomeScreenState extends State<HomeScreen> {
       ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)), trailing: Text(r.incorrect.toString() + ' خطأ'), onTap: () => _showResultDetails(r)))),
     ]);
   }
-  Widget _settingsPage() => ListView(padding: const EdgeInsets.all(18), children: const [
-    ListTile(leading: Icon(Icons.phone_android), title: Text('المعالجة على الجهاز'), subtitle: Text('التصوير والتحليل والحفظ المحلي لا تحتاج إلى حساب فوترة أو اتصال دائم بالإنترنت.')),
-    ListTile(leading: Icon(Icons.privacy_tip_outlined), title: Text('الخصوصية'), subtitle: Text('تُحفظ الاختبارات والنتائج على الجهاز. لا تُرفع صور الطلاب إلى خادم في هذا الإصدار.')),
-    ListTile(leading: Icon(Icons.info_outline), title: Text('نسخة تجريبية'), subtitle: Text('يجب مراجعة الإجابات المقروءة قبل اعتماد الدرجة، خصوصاً عند ظهور علامات غير واضحة.')),
+  Widget _settingsPage() => ListView(padding: const EdgeInsets.all(18), children: [
+    const ListTile(leading: Icon(Icons.phone_android), title: Text('المعالجة على الجهاز'), subtitle: Text('التصوير والتحليل والحفظ المحلي لا تحتاج إلى حساب فوترة أو اتصال دائم بالإنترنت.')),
+    Card(child: Column(children: [
+      const ListTile(leading: Icon(Icons.backup_outlined), title: Text('نسخ احتياطي للبيانات'), subtitle: Text('احفظ الاختبارات ومفاتيحها والنماذج وسجل النتائج في ملف مستقل قبل تحديث التطبيق.')),
+      ListTile(leading: const Icon(Icons.file_upload_outlined), title: const Text('تصدير نسخة احتياطية'), onTap: () async {
+        try {
+          final json = await store.exportBackup();
+          final dir = await getTemporaryDirectory();
+          final file = File('${dir.path}/alqadi-backup-${DateTime.now().millisecondsSinceEpoch}.json');
+          await file.writeAsString(json, flush: true);
+          await Share.shareXFiles([XFile(file.path)], text: 'النسخة الاحتياطية لتطبيق القاضي الذكي');
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء النسخة الاحتياطية: $e')));
+        }
+      }),
+      ListTile(leading: const Icon(Icons.file_download_outlined), title: const Text('استعادة نسخة احتياطية'), onTap: () async {
+        final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+          title: const Text('استعادة البيانات'),
+          content: const Text('ستستبدل هذه العملية الاختبارات والنتائج الحالية بمحتويات النسخة الاحتياطية. هل تريد المتابعة؟'),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('استعادة'))],
+        ));
+        if (confirm != true) return;
+        try {
+          final count = await store.pickAndImportBackup();
+          if (count == null) return;
+          await _load();
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تمت استعادة $count سجلّاً بنجاح.')));
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذرت استعادة النسخة: $e')));
+        }
+      }),
+    ])),
+    const ListTile(leading: Icon(Icons.privacy_tip_outlined), title: Text('الخصوصية'), subtitle: Text('تُحفظ الاختبارات والنتائج على الجهاز. لا تُرفع صور الطلاب إلى خادم في هذا الإصدار.')),
+    const ListTile(leading: Icon(Icons.info_outline), title: Text('نسخة تجريبية'), subtitle: Text('يجب مراجعة الإجابات المقروءة قبل اعتماد الدرجة، خصوصاً عند ظهور علامات غير واضحة.')),
   ]);
 }
 
