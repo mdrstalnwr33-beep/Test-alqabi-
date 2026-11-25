@@ -135,10 +135,11 @@ class _ExamDetailScreen extends StatefulWidget {
 class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   late List<int?> answers;
   late List<String> questionTypes;
+  late List<ExamVariant> variants;
   final title = TextEditingController(), subject = TextEditingController();
   final school = TextEditingController(), teacher = TextEditingController();
   @override
-  void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); title.text = widget.exam.title; subject.text = widget.exam.subject; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
+  void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); variants = List<ExamVariant>.from(widget.exam.variants); title.text = widget.exam.title; subject.text = widget.exam.subject; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
 
   Future<void> _editExamDetails() async {
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
@@ -165,7 +166,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       schoolName: school.text.trim(), teacherName: teacher.text.trim(),
       // Keep generated forms when only metadata or answer-key values change.
       // A changed question layout invalidates their mappings, so discard them.
-      variants: sameQuestionLayout ? widget.exam.variants : const [],
+      variants: sameQuestionLayout ? variants : const [],
     );
     widget.onSave(updated);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ مفتاح الإجابة على الجهاز.')));
@@ -213,6 +214,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         schoolName: school.text.trim(), teacherName: teacher.text.trim(),
         variants: variants,
       );
+      this.variants = List<ExamVariant>.from(variants);
       widget.onSave(updated);
       if (mounted) setState(() {});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -238,7 +240,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       schoolName: school.text.trim(),
       teacherName: teacher.text.trim(),
       // PDF actions must not silently strip the variants already saved on the exam.
-      variants: widget.exam.variants,
+      variants: variants,
     );
     return OmrSheetService.buildPdf(currentExam);
   }
@@ -310,9 +312,9 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
           OutlinedButton.icon(onPressed: _printSheet, icon: const Icon(Icons.print), label: const Text('طباعة الورقة')),
           OutlinedButton.icon(onPressed: _generateVariants, icon: const Icon(Icons.copy_all), label: const Text('إنشاء نماذج متعددة')),
         ]),
-        if (widget.exam.variants.isNotEmpty) ...[
+        if (variants.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('النماذج المحفوظة: ${widget.exam.variants.length} — ${widget.exam.variants.map((v) => v.code).take(6).join('، ')}${widget.exam.variants.length > 6 ? ' ...' : ''}',
+          Text('النماذج المحفوظة: ${variants.length} — ${variants.map((v) => v.code).take(6).join('، ')}${variants.length > 6 ? ' ...' : ''}',
             textAlign: TextAlign.center, style: const TextStyle(color: Colors.teal, fontSize: 12)),
         ],
       ])),
