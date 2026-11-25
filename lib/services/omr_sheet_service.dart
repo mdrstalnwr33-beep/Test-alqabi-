@@ -97,10 +97,25 @@ class OmrSheetService {
         questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
         schoolName: exam.schoolName, teacherName: exam.teacherName,
       );
-      if (variant != null &&
-          (variant.questionOrder.length != exam.questionCount ||
-           variant.optionOrder.length != exam.questionCount)) {
-        throw ArgumentError('خريطة النموذج غير متوافقة مع الاختبار.');
+      if (variant != null) {
+        if (studentName.trim().isEmpty) {
+          throw ArgumentError('اسم الطالب مطلوب لكل ورقة نموذج مخصصة.');
+        }
+        if (variant.questionOrder.length != exam.questionCount ||
+            variant.optionOrder.length != exam.questionCount ||
+            variant.questionOrder.toSet().length != exam.questionCount ||
+            variant.questionOrder.any((q) => q < 0 || q >= exam.questionCount)) {
+          throw ArgumentError('ترتيب أسئلة النموذج غير متوافق مع الاختبار.');
+        }
+        for (var q = 0; q < exam.questionCount; q++) {
+          final expected = exam.optionsFor(q);
+          final order = variant.optionOrder[q];
+          if (order.length != expected ||
+              order.toSet().length != expected ||
+              order.any((option) => option < 0 || option >= expected)) {
+            throw ArgumentError('ترتيب خيارات النموذج رقم ${q + 1} غير صالح.');
+          }
+        }
       }
     // The existing exam header is placed on the right side of the sheet.
     final header = pw.Container(
