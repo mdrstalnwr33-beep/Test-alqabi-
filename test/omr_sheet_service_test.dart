@@ -83,7 +83,7 @@ void main() {
         questionTypes: const ['tf', 'mcq'],
         optionCount: 2,
         answerKey: const [0, 0],
-        count: 3,
+        count: 5,
       ),
       throwsA(isA<ArgumentError>().having(
         (error) => error.message.toString(),
