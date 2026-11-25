@@ -16,6 +16,8 @@ class OmrReadout {
     this.variantCode = '',
     this.questionNumbers = const [],
     this.optionDisplayIndex = const [],
+    this.questionOrder = const [],
+    this.variantAnswerKey = const [],
   });
   /// Answers are stored in the original exam/key order.
   final List<int?> answers;
@@ -26,6 +28,10 @@ class OmrReadout {
   final List<int> questionNumbers;
   /// For each original question and original option, its displayed A/B/C/D position.
   final List<List<int>> optionDisplayIndex;
+  /// Maps displayed question positions to original exam question indexes.
+  final List<int> questionOrder;
+  /// Correct option indexes in this exact variant's printed question/option order.
+  final List<int?> variantAnswerKey;
 }
 class OmrScannerService {
   OmrScannerService({
@@ -206,6 +212,12 @@ class OmrScannerService {
       variantCode: variantCode,
       questionNumbers: questionNumbers,
       optionDisplayIndex: optionDisplayIndex,
+      questionOrder: variant == null
+          ? List<int>.generate(exam.questionCount, (q) => q)
+          : List<int>.from(variant.questionOrder),
+      variantAnswerKey: variant == null
+          ? List<int?>.from(exam.answerKey)
+          : variant.getAnswerKey(exam.answerKey),
     );
   }
 
