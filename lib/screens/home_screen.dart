@@ -271,29 +271,28 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       if (answers.length != widget.exam.questionCount || answers.any((answer) => answer == null)) {
         throw StateError('حدد الإجابة الصحيحة لجميع الأسئلة قبل توزيع الاختبار.');
       }
-      final directory = await getTemporaryDirectory();
-      final files = <XFile>[];
-      final currentExam = Exam(
-        id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
-        questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
-        answerKey: List<int?>.from(answers), questionTypes: List<String>.from(questionTypes),
-          schoolName: school.text.trim(), teacherName: teacher.text.trim(),
-        variants: List<ExamVariant>.from(variants),
-      );
-      for (var i = 0; i < names.length; i++) {
-        final variant = variants[i % variants.length];
-        final safeIndex = (i + 1).toString().padLeft(3, '0');
-        final answerBytes = await OmrSheetService.buildPdf(
-          currentExam, variant: variant, studentName: names[i],
-        );
-        final safeName = names[i].replaceAll(RegExp(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFA-Za-z0-9_-]+'), '_');
-        final answerFile = File('${directory.path}/ورقة_الإجابة_${safeIndex}_${safeName}_${variant.code}.pdf');
-        await answerFile.writeAsBytes(answerBytes, flush: true);
-        files.add(XFile(answerFile.path, mimeType: 'application/pdf'));
-      }
-      if (files.isNotEmpty) {
-        await Share.shareXFiles(files, text: 'أوراق الإجابة المخصصة للطلاب — ${names.length} طالباً');
-      }
+      final assignments = <AnswerSheetAssignment>[
+        for (var i = 0; i < names.length; i++)
+          AnswerSheetAssignment(
+            variant: variants[i],
+            studentName: names[i],
+          ),
+      ];
+      final bytes = await OmrSheetService.buildBatchPdf(currentExam, assignments: assignments);
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('أوراق الإجابة بأسماء الطلاب')),
+          body: PdfPreview(
+            build: (_) async => bytes,
+            allowPrinting: true,
+            allowSharing: true,
+            canChangePageFormat: false,
+            canChangeOrientation: false,
+            pdfFileName: 'أوراق_إجابات_الطلاب.pdf',
+          ),
+        ),
+      ));
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تجهيز أوراق الطلاب: $error')));
     }
