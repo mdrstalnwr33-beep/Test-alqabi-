@@ -7,10 +7,25 @@ import '../models/exam.dart';
 import 'omr_sheet_service.dart';
 class ScanPoint { const ScanPoint(this.x, this.y); final double x, y; }
 class OmrReadout {
-  const OmrReadout({required this.answers, required this.ambiguousQuestions, required this.blankQuestions, this.studentName = '', this.seatNumber = '', this.variantCode = ''});
+  const OmrReadout({
+    required this.answers,
+    required this.ambiguousQuestions,
+    required this.blankQuestions,
+    this.studentName = '',
+    this.seatNumber = '',
+    this.variantCode = '',
+    this.questionNumbers = const [],
+    this.optionDisplayIndex = const [],
+  });
+  /// Answers are stored in the original exam/key order.
   final List<int?> answers;
+  /// These question numbers are the numbers printed on the scanned variant.
   final List<int> ambiguousQuestions, blankQuestions;
   final String studentName, seatNumber, variantCode;
+  /// For each original question index, its displayed number on this paper.
+  final List<int> questionNumbers;
+  /// For each original question and original option, its displayed A/B/C/D position.
+  final List<List<int>> optionDisplayIndex;
 }
 class OmrScannerService {
   OmrScannerService({
@@ -168,8 +183,30 @@ class OmrScannerService {
       else { displayedAnswers.add(ranked.first); }
     }
     final answers = variant == null ? displayedAnswers : variant.mapDisplayedAnswersToOriginal(displayedAnswers);
-    return OmrReadout(answers: answers, ambiguousQuestions: ambiguous, blankQuestions: blanks,
-      studentName: identity.$1, seatNumber: identity.$2, variantCode: variantCode);
+
+    // Keep the answer data in original key order, but also retain the printed
+    // question/option positions so the review screen mirrors the student's form.
+    final questionNumbers = List<int>.generate(exam.questionCount, (q) =>
+        variant == null
+            ? OmrSheetService.visualQuestionNumber(exam, q)
+            : variant.questionOrder.indexOf(q) + 1);
+    final optionDisplayIndex = List<List<int>>.generate(exam.questionCount, (q) {
+      final optionCount = exam.optionsFor(q);
+      if (variant == null) return List<int>.generate(optionCount, (j) => j);
+      final displayedOrder = variant.optionOrder[q];
+      return List<int>.generate(optionCount, (j) => displayedOrder.indexOf(j));
+    });
+
+    return OmrReadout(
+      answers: answers,
+      ambiguousQuestions: ambiguous,
+      blankQuestions: blanks,
+      studentName: identity.$1,
+      seatNumber: identity.$2,
+      variantCode: variantCode,
+      questionNumbers: questionNumbers,
+      optionDisplayIndex: optionDisplayIndex,
+    );
   }
 
   Future<String> _readVariantCode(imglib.Image warped) async {
