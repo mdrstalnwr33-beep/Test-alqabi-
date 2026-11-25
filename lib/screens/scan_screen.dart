@@ -67,6 +67,7 @@ class _ScanScreenState extends State<ScanScreen> {
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
         studentName: review.studentName.isEmpty ? 'غير مقروء' : review.studentName,
         seatNumber: review.seatNumber,
+        variantCode: readout.variantCode,
         responses: reviewed, correct: correct, incorrect: incorrect, unanswered: unanswered,
         ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
       );
@@ -180,7 +181,7 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
         const SizedBox(height: 8),
         TextField(controller: seatNumberController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'رقم الجلوس / الكود - قراءة تلقائية', helperText: widget.readout.seatNumber.isEmpty ? 'لم يُقرأ الرقم بوضوح.' : 'تم استخراج الرقم من الورقة.', prefixIcon: const Icon(Icons.confirmation_number_outlined), border: const OutlineInputBorder())),
       ])),
-      Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
+      Padding(padding: const EdgeInsets.all(12), child: Text('راجع القراءة قبل اعتماد الدرجة. كود النموذج: ${widget.readout.variantCode} — الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.', style: const TextStyle(height: 1.5))),
       Expanded(
         child: ListView.builder(
           itemCount: answers.length,
