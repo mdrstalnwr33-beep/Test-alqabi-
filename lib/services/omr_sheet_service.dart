@@ -13,6 +13,13 @@ class BubblePosition {
   final double x, y;
 }
 
+class AnswerSheetAssignment {
+  const AnswerSheetAssignment({required this.variant, required this.studentName, this.seatNumber = ''});
+  final ExamVariant? variant;
+  final String studentName;
+  final String seatNumber;
+}
+
 class OmrSheetService {
   static const pageWidth = 595.0, pageHeight = 842.0;
   static const _top = 250.0, _bottom = 790.0;
@@ -53,17 +60,17 @@ class OmrSheetService {
         (_top + row * pitch) / pageHeight);
   }
 
-  static Future<Uint8List> buildPdf(Exam exam, {ExamVariant? variant, String studentName = '', String seatNumber = ''}) async {
-    final layoutExam = variant == null ? exam : Exam(
-      id: exam.id, title: exam.title, subject: exam.subject,
-      questionCount: exam.questionCount, optionCount: exam.optionCount,
-      answerKey: exam.answerKey,
-      questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
-      schoolName: exam.schoolName, teacherName: exam.teacherName,
-    );
-    if (variant != null && (variant.questionOrder.length != exam.questionCount || variant.optionOrder.length != exam.questionCount)) {
-      throw ArgumentError('خريطة النموذج غير متوافقة مع الاختبار.');
-    }
+  static Future<Uint8List> buildPdf(Exam exam, {ExamVariant? variant, String studentName = '', String seatNumber = ''}) =>
+      buildBatchPdf(exam, assignments: [
+        AnswerSheetAssignment(variant: variant, studentName: studentName, seatNumber: seatNumber),
+      ]);
+
+  /// Builds one printable PDF containing one personalized page per student.
+  static Future<Uint8List> buildBatchPdf(
+    Exam exam, {
+    required List<AnswerSheetAssignment> assignments,
+  }) async {
+    if (assignments.isEmpty) throw ArgumentError('أضف طالباً واحداً على الأقل.');
     final doc = pw.Document();
     late final pw.Font arabic;
     try {
@@ -79,6 +86,22 @@ class OmrSheetService {
       throw StateError('تعذر قراءة شعار الأستاذ محمد القاضي.');
     }
     final logoPngBytes = Uint8List.fromList(img.encodePng(logoImage));
+    for (final assignment in assignments) {
+      final variant = assignment.variant;
+      final studentName = assignment.studentName;
+      final seatNumber = assignment.seatNumber;
+      final layoutExam = variant == null ? exam : Exam(
+        id: exam.id, title: exam.title, subject: exam.subject,
+        questionCount: exam.questionCount, optionCount: exam.optionCount,
+        answerKey: exam.answerKey,
+        questionTypes: variant.questionOrder.map((i) => exam.questionTypes[i]).toList(),
+        schoolName: exam.schoolName, teacherName: exam.teacherName,
+      );
+      if (variant != null &&
+          (variant.questionOrder.length != exam.questionCount ||
+           variant.optionOrder.length != exam.questionCount)) {
+        throw ArgumentError('خريطة النموذج غير متوافقة مع الاختبار.');
+      }
     // The existing exam header is placed on the right side of the sheet.
     final header = pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -142,6 +165,7 @@ class OmrSheetService {
         child: pw.Text('CODE: ${variant?.code ?? 'BASE'}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
       )),
     ])));
+    }
     return doc.save();
   }
 
