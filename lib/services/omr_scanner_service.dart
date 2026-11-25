@@ -281,7 +281,7 @@ class OmrScannerService {
           }
         }
         int arabicCount(String value) =>
-            RegExp(r'[\\u0600-\\u06FF]').allMatches(value).length;
+            RegExp(r'[\u0600-\u06FF]').allMatches(value).length;
         candidates.sort((a, b) => arabicCount(b).compareTo(arabicCount(a)));
         return candidates.isEmpty ? '' : candidates.first;
       } finally {
@@ -293,11 +293,11 @@ class OmrScannerService {
       final rawName = await recognize(top: 304, fileName: 'student_name');
       final rawSeat = await recognize(top: 336, fileName: 'seat_number');
       final name = rawName
-          .replaceAll(RegExp(r'اسم\\s*الطالب|اسم الطالب|الطالب'), ' ')
-          .replaceAll(RegExp(r'[^\\u0600-\\u06FF\\s]'), ' ')
-          .replaceAll(RegExp(r'\\s+'), ' ')
+          .replaceAll(RegExp(r'اسم\s*الطالب|اسم الطالب|الطالب'), ' ')
+          .replaceAll(RegExp(r'[^\u0600-\u06FF\s]'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ')
           .trim();
-      final arabicLetters = RegExp(r'[\\u0621-\\u064A]').allMatches(name).length;
+      final arabicLetters = RegExp(r'[\u0621-\u064A]').allMatches(name).length;
       final digits = rawSeat.replaceAll('٠','0').replaceAll('١','1')
           .replaceAll('٢','2').replaceAll('٣','3').replaceAll('٤','4')
           .replaceAll('٥','5').replaceAll('٦','6').replaceAll('٧','7')
@@ -305,7 +305,7 @@ class OmrScannerService {
       // Do not save a handful of OCR look-alike characters as a student's
       // name. Leave it blank for manual confirmation in the review screen.
       return (arabicLetters >= 3 ? name : '',
-          RegExp(r'\\d+').firstMatch(digits)?.group(0) ?? '');
+          RegExp(r'\d+').firstMatch(digits)?.group(0) ?? '');
     } catch (_) {
       return ('', '');
     }
