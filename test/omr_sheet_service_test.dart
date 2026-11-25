@@ -79,6 +79,9 @@ void main() {
     }
     final originalKey = <int?>[1, 0, 2, 3, 1];
     for (final variant in first) {
+      for (var q = 0; q < types.length; q++) {
+        if (types[q] == 'tf') expect(variant.optionOrder[q], [0, 1]);
+      }
       for (var displayedQuestion = 0; displayedQuestion < types.length; displayedQuestion++) {
         final displayedCorrect = variant.getDisplayedAnswer(displayedQuestion, originalKey);
         final originalQuestion = variant.questionOrder[displayedQuestion];
