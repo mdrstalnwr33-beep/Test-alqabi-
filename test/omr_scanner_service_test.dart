@@ -22,6 +22,11 @@ void main() {
     ScanPoint(22, 803),
   ];
 
+  OmrScannerService scanner() => OmrScannerService(
+    identityReader: (_) async => ('', ''),
+    variantCodeReader: (_) async => '',
+  );
+
   imglib.Image blankSheet() {
     final image = imglib.Image(width: 595, height: 842);
     imglib.fill(image, color: imglib.ColorRgb8(255, 255, 255));
@@ -69,7 +74,7 @@ void main() {
     final image = blankSheet();
     shade(image, exam, 0, 2);
 
-    final result = await OmrScannerService().scan(
+    final result = await scanner().scan(
       imageBytes: imglib.encodePng(image),
       corners: corners(),
       exam: exam,
@@ -87,7 +92,7 @@ void main() {
     shade(image, exam, 0, 0);
     shade(image, exam, 0, 1);
 
-    final result = await OmrScannerService().scan(
+    final result = await scanner().scan(
       imageBytes: imglib.encodePng(image),
       corners: corners(),
       exam: exam,
