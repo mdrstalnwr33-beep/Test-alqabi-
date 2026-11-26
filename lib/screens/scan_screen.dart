@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as imglib;
+import 'package:path_provider/path_provider.dart';
 import '../models/exam.dart';
 import '../services/omr_scanner_service.dart';
 import '../services/omr_grading_service.dart';
@@ -96,11 +97,14 @@ class _ScanScreenState extends State<ScanScreen> {
           }
         }
       }
+      final appDir = await getApplicationDocumentsDirectory();
+      final savedPaper = await File(photo.path).copy('${appDir.path}/student-paper-${DateTime.now().microsecondsSinceEpoch}.jpg');
       final result = ExamResult(
         id: DateTime.now().microsecondsSinceEpoch.toString(), examId: exam.id, examTitle: exam.title,
         studentName: review.studentName.isEmpty ? 'غير مقروء' : review.studentName,
         seatNumber: review.seatNumber,
         variantCode: readout.variantCode,
+        sourceImagePath: savedPaper.path,
         responses: reviewed, correctAnswers: savedCorrectAnswers,
         questionTypes: List<String>.from(exam.questionTypes),
         correct: correct, incorrect: incorrect, unanswered: unanswered,
