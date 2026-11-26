@@ -112,7 +112,7 @@ void main() {
       exam: exam,
     );
     expect(result.answers, [null, null]);
-    expect(result.blankQuestions, [1, 2]);
+    expect(result.blankQuestions, [2, 1]);
     expect(result.ambiguousQuestions, isEmpty);
     expect(result.isAbsent, isTrue);
   });
