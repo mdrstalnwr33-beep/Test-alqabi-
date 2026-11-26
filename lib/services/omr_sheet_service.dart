@@ -141,11 +141,9 @@ class OmrSheetService {
         pw.SizedBox(height: 5),
         _rtl('المادة: ${exam.subject}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('المعلم: ${exam.teacherName.isEmpty ? '______________' : exam.teacherName}', arabic, 10),
+        _rtl('الصف: ____________________', arabic, 10),
         pw.SizedBox(height: 4),
         _rtl('اسم الطالب: ${studentName.isEmpty ? '____________________' : studentName}', arabic, 10),
-        pw.SizedBox(height: 4),
-        _rtl('رقم الجلوس: ${seatNumber.isEmpty ? '__________' : seatNumber}', arabic, 10),
       ]),
     );
     // Student instructions are printed in a matching panel on the left.
@@ -164,7 +162,7 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('٣- لا تضع علامة صح؛ ظلّل الدائرة بالكامل.', arabic, 9),
         pw.SizedBox(height: 4),
-        _rtl('٤- اكتب اسمك ورقم جلوسك بخط واضح في الخانتين.', arabic, 9),
+        _rtl('٤- اكتب اسمك بخط واضح في المكان المخصص.', arabic, 9),
         pw.SizedBox(height: 4),
         _rtl('٥- لا تثنِ الورقة أو تكتب داخل دوائر الإجابة.', arabic, 9),
       ]),
@@ -184,6 +182,23 @@ class OmrSheetService {
       // Fixed calibration markers: same four page-corner positions as the printed reference form.
       _marker(15, 17), _marker(566, 17), _marker(566, 796), _marker(15, 796),
       ..._questionWidgets(layoutExam, arabic, variant: variant),
+      if (exam.teacherName.trim().isNotEmpty)
+        pw.Positioned(
+          left: 90, right: 90, top: 801,
+          child: pw.Center(
+            child: pw.Text(
+              ArabicReshaper.instance.reshape('الأستاذ/ ${exam.teacherName.trim()}'),
+              textDirection: pw.TextDirection.rtl,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(
+                font: bold,
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF243B53),
+              ),
+            ),
+          ),
+        ),
       pw.Positioned(left: 28, top: 816, child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.black, width: 1)),
