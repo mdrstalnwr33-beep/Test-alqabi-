@@ -84,6 +84,10 @@ class _ScanScreenState extends State<ScanScreen> {
       final correct = grade.correct;
       final incorrect = grade.incorrect;
       final unanswered = grade.unanswered;
+      // A completely untouched sheet is an absence; an individual blank or
+      // double-marked question remains worth zero without marking attendance absent.
+      final isAbsent = reviewed.every((answer) => answer == null) &&
+          readout.ambiguousQuestions.isEmpty;
       final savedCorrectAnswers = List<int?>.filled(exam.questionCount, null);
       if (readout.variantCode == 'BASE') {
         for (var q = 0; q < exam.questionCount; q++) { savedCorrectAnswers[q] = exam.answerKey[q]; }
@@ -108,11 +112,11 @@ class _ScanScreenState extends State<ScanScreen> {
         responses: reviewed, correctAnswers: savedCorrectAnswers,
         questionTypes: List<String>.from(exam.questionTypes),
         correct: correct, incorrect: incorrect, unanswered: unanswered,
-        ambiguous: readout.ambiguousQuestions.length, scannedAt: DateTime.now(),
+        ambiguous: readout.ambiguousQuestions.length, isAbsent: isAbsent, scannedAt: DateTime.now(),
       );
       widget.onResult(result);
       setState(() { image = null; corners = []; stageMessage = 'تم تصحيح الورقة وحفظ النتيجة.'; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم التصحيح: ' + correct.toString() + ' من ' + exam.questionCount.toString())));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAbsent ? 'تم تسجيل الطالب غائباً لعدم تظليل أي فقرة.' : 'تم التصحيح: ' + correct.toString() + ' من ' + exam.questionCount.toString())));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحليل الورقة: ' + e.toString())));
     } finally { if (mounted) setState(() => busy = false); }
@@ -284,7 +288,7 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
       Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          'راجع القراءة قبل اعتماد الدرجة. كود النموذج: ${widget.readout.variantCode} — الأسئلة غير الواضحة: ${widget.readout.ambiguousQuestions.length}، الفارغة: ${widget.readout.blankQuestions.length}.',
+          'راجع القراءة قبل اعتماد الدرجة. كود النموذج: ${widget.readout.variantCode} — التظليل المكرر/غير الواضح: ${widget.readout.ambiguousQuestions.length}، الفقرات غير المظللة: ${widget.readout.blankQuestions.length}. كل فقرة فارغة أو مزدوجة التظليل درجتها صفر، وإذا لم تُظلّل أي فقرة تسجل الورقة غائباً.',
           style: const TextStyle(height: 1.5),
         ),
       ),
