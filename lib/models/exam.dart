@@ -278,8 +278,8 @@ class Exam {
 }
 
 class ExamResult {
-  ExamResult({required this.id, required this.examId, required this.examTitle, required this.studentName, required this.responses, required this.correctAnswers, required this.questionTypes, required this.correct, required this.incorrect, required this.unanswered, required this.ambiguous, required this.scannedAt, this.seatNumber = '', this.variantCode = ''});
-  final String id, examId, examTitle, studentName, seatNumber, variantCode;
+  ExamResult({required this.id, required this.examId, required this.examTitle, required this.studentName, required this.responses, required this.correctAnswers, required this.questionTypes, required this.correct, required this.incorrect, required this.unanswered, required this.ambiguous, required this.scannedAt, this.seatNumber = '', this.variantCode = '', this.sourceImagePath = ''});
+  final String id, examId, examTitle, studentName, seatNumber, variantCode, sourceImagePath;
   /// Student responses and answer-key snapshot are stored in original exam order.
   final List<int?> responses, correctAnswers;
   final List<String> questionTypes;
@@ -287,11 +287,11 @@ class ExamResult {
   final DateTime scannedAt;
   int get total => responses.length;
   double get percentage => total == 0 ? 0 : correct * 100 / total;
-  Map<String, dynamic> toJson() => {'id': id, 'examId': examId, 'examTitle': examTitle, 'studentName': studentName, 'seatNumber': seatNumber, 'variantCode': variantCode, 'responses': responses, 'correctAnswers': correctAnswers, 'questionTypes': questionTypes, 'correct': correct, 'incorrect': incorrect, 'unanswered': unanswered, 'ambiguous': ambiguous, 'scannedAt': scannedAt.toIso8601String()};
+  Map<String, dynamic> toJson() => {'id': id, 'examId': examId, 'examTitle': examTitle, 'studentName': studentName, 'seatNumber': seatNumber, 'variantCode': variantCode, 'sourceImagePath': sourceImagePath, 'responses': responses, 'correctAnswers': correctAnswers, 'questionTypes': questionTypes, 'correct': correct, 'incorrect': incorrect, 'unanswered': unanswered, 'ambiguous': ambiguous, 'scannedAt': scannedAt.toIso8601String()};
   factory ExamResult.fromJson(Map<String, dynamic> json) => ExamResult(
     id: json['id'] as String, examId: json['examId'] as String, examTitle: json['examTitle'] as String,
     studentName: json['studentName'] as String, seatNumber: (json['seatNumber'] ?? '') as String,
-    variantCode: (json['variantCode'] ?? '') as String,
+    variantCode: (json['variantCode'] ?? '') as String, sourceImagePath: (json['sourceImagePath'] ?? '') as String,
     responses: (json['responses'] as List).map((v) => v == null ? null : v as int).toList(),
     correctAnswers: (json['correctAnswers'] as List?)?.map((v) => v == null ? null : v as int).toList() ?? const [],
     questionTypes: (json['questionTypes'] as List?)?.map((v) => v.toString()).toList() ?? const [],
