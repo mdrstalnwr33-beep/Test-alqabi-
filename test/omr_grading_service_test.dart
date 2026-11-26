@@ -65,6 +65,21 @@ void main() {
     }
   });
 
+  test('blank and multiply-marked answers award zero points', () {
+    final summary = OmrGradingService.grade(
+      originalAnswers: const [null, null],
+      questionOrder: const [0, 1],
+      optionDisplayIndex: const [[0, 1], [0, 1, 2, 3]],
+      displayedAnswerKey: const [0, 2],
+      questionTypes: const ['tf', 'mcq'],
+      optionCount: 4,
+    );
+    expect(summary.correct, 0);
+    expect(summary.incorrect, 0);
+    expect(summary.unanswered, 2);
+    expect(summary.total, 2);
+  });
+
   test('does not award a score when the model key is incomplete', () {
     expect(
       () => OmrGradingService.grade(
