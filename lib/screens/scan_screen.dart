@@ -44,7 +44,7 @@ class _ScanScreenState extends State<ScanScreen> {
     setState(() {
       image = capture.photo;
       corners = [];
-      stageMessage = 'تمت القراءة تلقائياً وعرض الإجابات الصحيحة والخاطئة.';
+      stageMessage = 'تمت القراءة الأولية؛ راجع الاسم والإجابات قبل اعتماد النتيجة.';
     });
     await scanNow(suppliedReadout: capture.readout);
   }
@@ -70,9 +70,13 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       final readout = suppliedReadout ?? await scanner.scan(imageBytes: await photo.readAsBytes(), exam: exam);
       if (!mounted) return;
-      final review = suppliedReadout == null
-          ? await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout)))
-          : _ReviewSubmission(answers: readout.answers, studentName: readout.studentName, seatNumber: readout.seatNumber);
+      // Both gallery/camera scans and live auto-scans must pass through the
+      // same review step. Never save a live scan before the teacher can verify
+      // the OCR name and any uncertain answer marks.
+      final review = await Navigator.push<_ReviewSubmission>(
+        context,
+        MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout)),
+      );
       if (review == null || !mounted) return;
       final reviewed = review.answers;
       final grade = OmrGradingService.grade(
@@ -263,6 +267,7 @@ class _ReviewAnswersScreenState extends State<_ReviewAnswersScreen> {
           TextField(
             controller: studentNameController,
             textDirection: TextDirection.rtl,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               labelText: 'اسم الطالب - قراءة تلقائية',
               helperText: widget.readout.studentName.isEmpty
