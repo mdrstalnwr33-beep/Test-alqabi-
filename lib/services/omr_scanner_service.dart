@@ -33,7 +33,7 @@ class OmrReadout {
   /// Correct option indexes in this exact variant's printed question/option order.
   final List<int?> variantAnswerKey;
   /// Perspective-corrected page image used for accurate on-page live feedback.
-  final Uint8List warpedImageBytes;
+  final Uint8List? warpedImageBytes;
   /// Marked displayed option indexes for each displayed question (including duplicates).
   final List<List<int>> displayedMarkedOptions;
 
