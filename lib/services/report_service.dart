@@ -50,9 +50,9 @@ class ReportService {
                 padding: const pw.EdgeInsets.symmetric(vertical: 15),
                 decoration: pw.BoxDecoration(color: PdfColors.teal50, borderRadius: pw.BorderRadius.circular(10)),
                 child: pw.Column(children: [
-                  pw.Text('الدرجة', style: pw.TextStyle(font: arabicFont, fontSize: 16)),
-                  pw.Text('${result.correct} / ${result.total}', style: pw.TextStyle(font: arabicFont, fontSize: 32, fontWeight: pw.FontWeight.bold, color: PdfColors.teal900)),
-                  pw.Text('${result.percentage.toStringAsFixed(1)}٪', style: pw.TextStyle(font: arabicFont, fontSize: 19)),
+                  pw.Text(result.isAbsent ? 'الحالة' : 'الدرجة', style: pw.TextStyle(font: arabicFont, fontSize: 16)),
+                  pw.Text(result.isAbsent ? 'غائب' : '${result.correct} / ${result.total}', style: pw.TextStyle(font: arabicFont, fontSize: 32, fontWeight: pw.FontWeight.bold, color: PdfColors.teal900)),
+                  if (!result.isAbsent) pw.Text('${result.percentage.toStringAsFixed(1)}٪', style: pw.TextStyle(font: arabicFont, fontSize: 19)),
                 ]),
               ),
               pw.SizedBox(height: 14),
