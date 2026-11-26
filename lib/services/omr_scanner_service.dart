@@ -187,11 +187,15 @@ class OmrScannerService {
     );
     final displayedAnswers = <int?>[], ambiguous = <int>[], blanks = <int>[];
     final displayedMarkedOptions = <List<int>>[];
+    // Normalize local illumination once per page before measuring bubbles.
+    // This reduces false blanks caused by phone shadows and uneven lighting.
+    final normalizedGray = _normalizeForLighting(warped);
     for (var q = 0; q < layoutExam.questionCount; q++) {
       final scores = <double>[];
       for (var option = 0; option < layoutExam.optionsFor(q); option++) {
         final p = OmrSheetService.positionFor(layoutExam, q, option);
-        scores.add(_darkRatio(warped, (p.x * outputWidth).round(), (p.y * outputHeight).round()));
+        scores.add(_darkRatio(normalizedGray, warped.width, warped.height,
+            (p.x * outputWidth).round(), (p.y * outputHeight).round()));
       }
       final ranked = List<int>.generate(scores.length, (i) => i)..sort((a, b) => scores[b].compareTo(scores[a]));
       final best = scores[ranked.first], second = ranked.length > 1 ? scores[ranked[1]] : 0.0;
@@ -452,10 +456,53 @@ class OmrScannerService {
     }
     return List<double>.generate(8, (i) => m[i][8]);
   }
-  double _darkRatio(imglib.Image image, int cx, int cy) {
+  /// Estimates and removes slow-changing page illumination (shadows) using
+  /// a box-background integral image. The printed bubble geometry is untouched.
+  Uint8List _normalizeForLighting(imglib.Image image) {
+    final width = image.width, height = image.height;
+    final stride = width + 1;
+    final integral = Int64List((width + 1) * (height + 1));
+    final gray = Uint8List(width * height);
+    for (var y = 0; y < height; y++) {
+      var rowSum = 0;
+      for (var x = 0; x < width; x++) {
+        final pixel = image.getPixel(x, y);
+        final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b)
+            .round().clamp(0, 255);
+        gray[y * width + x] = value;
+        rowSum += value;
+        integral[(y + 1) * stride + x + 1] =
+            integral[y * stride + x + 1] + rowSum;
+      }
+    }
+
+    const backgroundRadius = 20;
+    final normalized = Uint8List(width * height);
+    for (var y = 0; y < height; y++) {
+      final y0 = (y - backgroundRadius).clamp(0, height - 1);
+      final y1 = (y + backgroundRadius + 1).clamp(0, height);
+      for (var x = 0; x < width; x++) {
+        final x0 = (x - backgroundRadius).clamp(0, width - 1);
+        final x1 = (x + backgroundRadius + 1).clamp(0, width);
+        final sum = integral[y1 * stride + x1] -
+            integral[y0 * stride + x1] -
+            integral[y1 * stride + x0] +
+            integral[y0 * stride + x0];
+        final area = (x1 - x0) * (y1 - y0);
+        final background = area == 0 ? 255.0 : sum / area;
+        // White paper under a shadow becomes near-white; dark ink remains dark.
+        final value = (gray[y * width + x] * 255.0 /
+                (background < 1 ? 1 : background))
+            .round().clamp(0, 255);
+        normalized[y * width + x] = value;
+      }
+    }
+    return normalized;
+  }
+
+  double _darkRatio(Uint8List gray, int width, int height, int cx, int cy) {
     // Search a small neighborhood for the filled center of the bubble.
-    // This compensates for minor perspective/registration errors after warping,
-    // while avoiding the printed outer ring of an unfilled bubble.
+    // The center disc excludes the printed outer ring of an empty bubble.
     const radius = 5;
     var bestRatio = 0.0;
     for (var oy = -8; oy <= 8; oy += 2) {
@@ -463,12 +510,10 @@ class OmrScannerService {
         var dark = 0, total = 0;
         for (var y = -radius; y <= radius; y++) {
           for (var x = -radius; x <= radius; x++) {
-            if (x*x + y*y > radius*radius) continue;
+            if (x * x + y * y > radius * radius) continue;
             final pxX = cx + ox + x, pxY = cy + oy + y;
-            if (pxX < 0 || pxY < 0 || pxX >= image.width || pxY >= image.height) continue;
-            final px = image.getPixel(pxX, pxY);
-            final gray = 0.299 * px.r + 0.587 * px.g + 0.114 * px.b;
-            if (gray < 130) dark++;
+            if (pxX < 0 || pxY < 0 || pxX >= width || pxY >= height) continue;
+            if (gray[pxY * width + pxX] < 185) dark++;
             total++;
           }
         }
