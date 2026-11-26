@@ -94,7 +94,7 @@ class _LiveAutoScanScreenState extends State<LiveAutoScanScreen> {
     for (var y = 0; y < frame.height; y++) {
       final row = y * plane.bytesPerRow;
       for (var x = 0; x < frame.width; x++) {
-        final index = row + x * plane.bytesPerPixel!;
+        final index = row + x * (plane.bytesPerPixel ?? 1);
         final value = data[index];
         image.setPixelRgb(x, y, value, value, value);
       }
