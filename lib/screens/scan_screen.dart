@@ -34,17 +34,19 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> openLiveAutoScan() async {
-    final photo = await Navigator.push<XFile>(
+    final exam = selectedExam;
+    if (exam == null) return;
+    final capture = await Navigator.push<LiveScanCapture>(
       context,
-      MaterialPageRoute(builder: (_) => const LiveAutoScanScreen()),
+      MaterialPageRoute(builder: (_) => LiveAutoScanScreen(exam: exam)),
     );
-    if (photo == null || !mounted) return;
+    if (capture == null || !mounted) return;
     setState(() {
-      image = photo;
+      image = capture.photo;
       corners = [];
-      stageMessage = 'تم التقاط الورقة تلقائياً بعد ثبات المربعات الأربع. جارٍ التصحيح...';
+      stageMessage = 'تمت القراءة تلقائياً وعرض الإجابات الصحيحة والخاطئة.';
     });
-    await scanNow();
+    await scanNow(suppliedReadout: capture.readout);
   }
 
   Future<void> choose(ImageSource source) async {
@@ -56,7 +58,7 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  Future<void> scanNow() async {
+  Future<void> scanNow({OmrReadout? suppliedReadout}) async {
     final exam = selectedExam;
     final photo = image;
     if (exam == null || photo == null) return;
@@ -66,11 +68,11 @@ class _ScanScreenState extends State<ScanScreen> {
     }
     setState(() => busy = true);
     try {
-      final readout = await scanner.scan(imageBytes: await photo.readAsBytes(), exam: exam);
+      final readout = suppliedReadout ?? await scanner.scan(imageBytes: await photo.readAsBytes(), exam: exam);
       if (!mounted) return;
-      final review = await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(
-        exam: exam, readout: readout,
-      )));
+      final review = suppliedReadout == null
+          ? await Navigator.push<_ReviewSubmission>(context, MaterialPageRoute(builder: (_) => _ReviewAnswersScreen(exam: exam, readout: readout)))
+          : _ReviewSubmission(answers: readout.answers, studentName: readout.studentName, seatNumber: readout.seatNumber);
       if (review == null || !mounted) return;
       final reviewed = review.answers;
       final grade = OmrGradingService.grade(
