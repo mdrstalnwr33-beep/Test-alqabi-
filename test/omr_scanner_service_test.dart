@@ -84,6 +84,7 @@ void main() {
     expect(result.answers[1], isNull);
     expect(result.blankQuestions, [1]);
     expect(result.ambiguousQuestions, isEmpty);
+    expect(result.isAbsent, isFalse);
   });
 
   test('flags two equally shaded choices as ambiguous', () async {
@@ -100,6 +101,20 @@ void main() {
 
     expect(result.answers[0], isNull);
     expect(result.ambiguousQuestions, [2]);
+    expect(result.isAbsent, isFalse);
+  });
+
+  test('marks a completely unshaded paper as absent', () async {
+    final exam = makeExam();
+    final result = await scanner().scan(
+      imageBytes: imglib.encodePng(blankSheet()),
+      corners: corners(),
+      exam: exam,
+    );
+    expect(result.answers, [null, null]);
+    expect(result.blankQuestions, [1, 2]);
+    expect(result.ambiguousQuestions, isEmpty);
+    expect(result.isAbsent, isTrue);
   });
 
   test('still scans the original BASE sheet after variants have been generated', () async {
