@@ -212,11 +212,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _shareStudentCard(ExamResult result) async {
+    try {
+      Uint8List? paperBytes;
+      if (result.sourceImagePath.isNotEmpty) {
+        final paper = File(result.sourceImagePath);
+        if (await paper.exists()) paperBytes = await paper.readAsBytes();
+      }
+      final bytes = await reports.studentResultCardPdf(result, paperImage: paperBytes);
+      final dir = await getTemporaryDirectory();
+      final safeName = result.studentName.replaceAll(RegExp(r'[^A-Za-z0-9\\u0600-\\u06FF_-]'), '_');
+      final file = File('${dir.path}/student-result-${safeName.isEmpty ? result.id : safeName}.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles([XFile(file.path)], text: 'نتيجة الطالب ${result.studentName} — ${result.examTitle}');
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء بطاقة النتيجة: $e')));
+    }
+  }
+
   Widget _resultsPage() {
     if (results.isEmpty) return const Center(child: Text('لا توجد نتائج بعد. صحّح أول ورقة لتظهر النتائج هنا.'));
     return ListView(padding: const EdgeInsets.all(16), children: [
       Row(children: [const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))), IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); final dir = await getTemporaryDirectory(); final file = File('${dir.path}/alqadi-results.csv'); await file.writeAsBytes(bytes, flush: true); await Share.shareXFiles([XFile(file.path)], text: 'نتائج اختبارات القاضي الذكي'); }, icon: const Icon(Icons.table_view))]),
-      ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)), trailing: Text(r.incorrect.toString() + ' خطأ'), onTap: () => _showResultDetails(r)))),
+      ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + r.correct.toString() + '/' + r.total.toString() + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)), trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(r.incorrect.toString() + ' خطأ'),
+        IconButton(tooltip: 'مشاركة بطاقة النتيجة PDF', onPressed: () => _shareStudentCard(r), icon: const Icon(Icons.share_outlined)),
+      ]), onTap: () => _showResultDetails(r)))),
     ]);
   }
   Widget _settingsPage() => ListView(padding: const EdgeInsets.all(18), children: [
