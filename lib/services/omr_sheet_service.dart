@@ -141,7 +141,7 @@ class OmrSheetService {
         pw.SizedBox(height: 5),
         _rtl('المادة: ${exam.subject}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('الصف: ____________________', arabic, 10),
+        _rtl('الصف: ${exam.grade.trim().isEmpty ? '____________________' : exam.grade.trim()}', arabic, 10),
         pw.SizedBox(height: 4),
         _rtl('اسم الطالب: ${studentName.isEmpty ? '____________________' : studentName}', arabic, 10),
       ]),
