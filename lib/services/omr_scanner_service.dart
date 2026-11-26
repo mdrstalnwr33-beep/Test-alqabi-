@@ -468,7 +468,7 @@ class OmrScannerService {
       for (var x = 0; x < width; x++) {
         final pixel = image.getPixel(x, y);
         final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b)
-            .round().clamp(0, 255);
+            .round().clamp(0, 255).toInt();
         gray[y * width + x] = value;
         rowSum += value;
         integral[(y + 1) * stride + x + 1] =
@@ -479,11 +479,11 @@ class OmrScannerService {
     const backgroundRadius = 20;
     final normalized = Uint8List(width * height);
     for (var y = 0; y < height; y++) {
-      final y0 = (y - backgroundRadius).clamp(0, height - 1);
-      final y1 = (y + backgroundRadius + 1).clamp(0, height);
+      final y0 = (y - backgroundRadius).clamp(0, height - 1).toInt();
+      final y1 = (y + backgroundRadius + 1).clamp(0, height).toInt();
       for (var x = 0; x < width; x++) {
-        final x0 = (x - backgroundRadius).clamp(0, width - 1);
-        final x1 = (x + backgroundRadius + 1).clamp(0, width);
+        final x0 = (x - backgroundRadius).clamp(0, width - 1).toInt();
+        final x1 = (x + backgroundRadius + 1).clamp(0, width).toInt();
         final sum = integral[y1 * stride + x1] -
             integral[y0 * stride + x1] -
             integral[y1 * stride + x0] +
@@ -493,7 +493,7 @@ class OmrScannerService {
         // White paper under a shadow becomes near-white; dark ink remains dark.
         final value = (gray[y * width + x] * 255.0 /
                 (background < 1 ? 1 : background))
-            .round().clamp(0, 255);
+            .round().clamp(0, 255).toInt();
         normalized[y * width + x] = value;
       }
     }
@@ -524,4 +524,5 @@ class OmrScannerService {
       }
     }
     return bestRatio;
-  }}
+  }
+}
