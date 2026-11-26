@@ -32,6 +32,10 @@ class OmrReadout {
   final List<int> questionOrder;
   /// Correct option indexes in this exact variant's printed question/option order.
   final List<int?> variantAnswerKey;
+  /// Perspective-corrected page image used for accurate on-page live feedback.
+  final Uint8List warpedImageBytes;
+  /// Marked displayed option indexes for each displayed question (including duplicates).
+  final List<List<int>> displayedMarkedOptions;
 
   /// A paper is absent only when every question is blank and none is ambiguous
   /// (a double-marked question is not treated as an untouched paper).
@@ -180,6 +184,7 @@ class OmrScannerService {
       schoolName: exam.schoolName, teacherName: exam.teacherName,
     );
     final displayedAnswers = <int?>[], ambiguous = <int>[], blanks = <int>[];
+    final displayedMarkedOptions = <List<int>>[];
     for (var q = 0; q < layoutExam.questionCount; q++) {
       final scores = <double>[];
       for (var option = 0; option < layoutExam.optionsFor(q); option++) {
@@ -191,7 +196,9 @@ class OmrScannerService {
       // Count distinct bubble centers that contain a meaningful dark fill.
       // Any two marked options make the whole question invalid (zero points),
       // even if one mark is darker than the other.
-      final markedOptions = scores.where((score) => score >= 0.22).length;
+      final markedIndexes = <int>[for (var i = 0; i < scores.length; i++) if (scores[i] >= 0.22) i];
+      displayedMarkedOptions.add(markedIndexes);
+      final markedOptions = markedIndexes.length;
       if (markedOptions == 0) {
         displayedAnswers.add(null);
         blanks.add(OmrSheetService.visualQuestionNumber(layoutExam, q));
@@ -232,6 +239,8 @@ class OmrScannerService {
       variantAnswerKey: variant == null
           ? List<int?>.from(exam.answerKey)
           : variant.getAnswerKey(exam.answerKey),
+      warpedImageBytes: Uint8List.fromList(imglib.encodeJpg(warped, quality: 92)),
+      displayedMarkedOptions: displayedMarkedOptions,
     );
   }
 
