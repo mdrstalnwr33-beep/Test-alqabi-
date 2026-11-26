@@ -5,6 +5,7 @@ import 'package:image/image.dart' as imglib;
 import '../models/exam.dart';
 import '../services/omr_scanner_service.dart';
 import '../services/omr_grading_service.dart';
+import 'live_auto_scan_screen.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key, required this.exams, required this.onResult});
@@ -29,6 +30,20 @@ class _ScanScreenState extends State<ScanScreen> {
       final matches = widget.exams.where((e) => e.id == selectedExam!.id);
       selectedExam = matches.isEmpty ? null : matches.first;
     }
+  }
+
+  Future<void> openLiveAutoScan() async {
+    final photo = await Navigator.push<XFile>(
+      context,
+      MaterialPageRoute(builder: (_) => const LiveAutoScanScreen()),
+    );
+    if (photo == null || !mounted) return;
+    setState(() {
+      image = photo;
+      corners = [];
+      stageMessage = 'تم التقاط الورقة تلقائياً بعد ثبات المربعات الأربع. جارٍ التصحيح...';
+    });
+    await scanNow();
   }
 
   Future<void> choose(ImageSource source) async {
