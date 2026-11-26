@@ -32,6 +32,10 @@ class OmrReadout {
   final List<int> questionOrder;
   /// Correct option indexes in this exact variant's printed question/option order.
   final List<int?> variantAnswerKey;
+
+  /// A paper is absent only when every question is blank and none is ambiguous
+  /// (a double-marked question is not treated as an untouched paper).
+  bool get isAbsent => answers.every((answer) => answer == null) && ambiguousQuestions.isEmpty;
 }
 class OmrScannerService {
   OmrScannerService({
