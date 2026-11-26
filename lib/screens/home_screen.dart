@@ -39,14 +39,15 @@ class _HomeScreenState extends State<HomeScreen> {
     await store.saveResults(results);
   }
   Future<void> newExam() async {
-    final title = TextEditingController(), subject = TextEditingController();
+    final subject = TextEditingController(), grade = TextEditingController(), period = TextEditingController();
     final school = TextEditingController(), teacher = TextEditingController();
     final tfCount = TextEditingController(text: '10'), mcqCount = TextEditingController(text: '10'), options = TextEditingController(text: '4');
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('إنشاء ورقة إجابة جديدة'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم الاختبار')),
-        const SizedBox(height: 10), TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
+        TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
+        const SizedBox(height: 10), TextField(controller: grade, decoration: const InputDecoration(labelText: 'الصف — مثال: ثاني ثانوي')),
+        const SizedBox(height: 10), TextField(controller: period, decoration: const InputDecoration(labelText: 'الفترة أو نوع الاختبار — مثال: نهاية الفصل / شهر محرم')),
         const SizedBox(height: 10), TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         const SizedBox(height: 10), TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
         const SizedBox(height: 10), TextField(controller: tfCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'أولاً: عدد فقرات الصح والخطأ')),
@@ -58,11 +59,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
     if (ok != true) return;
     final mcq = int.tryParse(mcqCount.text) ?? 0, tf = int.tryParse(tfCount.text) ?? 0, n = mcq + tf, o = int.tryParse(options.text) ?? 0;
-    if (title.text.trim().isEmpty || n < 1 || n > 40 || mcq < 0 || tf < 0 || o < 2 || o > 5) {
+    if (subject.text.trim().isEmpty || grade.text.trim().isEmpty || period.text.trim().isEmpty || n < 1 || n > 40 || mcq < 0 || tf < 0 || o < 2 || o > 5) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تحقق من الاسم وعدد الأسئلة (حتى 40 في الورقة الواحدة) والخيارات.')));
       return;
     }
-    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: title.text.trim(), subject: subject.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(tf, 'tf'), ...List<String>.filled(mcq, 'mcq')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
+    final examTitle = '${subject.text.trim()} ${grade.text.trim()} ${period.text.trim()}';
+    setState(() => exams.insert(0, Exam(id: DateTime.now().microsecondsSinceEpoch.toString(), title: examTitle, subject: subject.text.trim(), grade: grade.text.trim(), termName: period.text.trim(), questionCount: n, optionCount: o, answerKey: List<int?>.filled(n, null), questionTypes: [...List<String>.filled(tf, 'tf'), ...List<String>.filled(mcq, 'mcq')], createdAt: DateTime.now(), schoolName: school.text.trim(), teacherName: teacher.text.trim())));
     await _persist();
   }
   Future<void> _deleteExam(Exam exam) async {
@@ -262,27 +264,32 @@ class _ExamDetailScreen extends StatefulWidget {
   State<_ExamDetailScreen> createState() => _ExamDetailScreenState();
 }
 class _ExamDetailScreenState extends State<_ExamDetailScreen> {
+  String get _composedTitle {
+    final parts = [subject.text.trim(), grade.text.trim(), period.text.trim()].where((part) => part.isNotEmpty).toList();
+    return parts.isEmpty ? title.text.trim() : parts.join(' ');
+  }
   late List<int?> answers;
   late List<String> questionTypes;
   late List<ExamVariant> variants;
-  final title = TextEditingController(), subject = TextEditingController();
+  final title = TextEditingController(), subject = TextEditingController(), grade = TextEditingController(), period = TextEditingController();
   final school = TextEditingController(), teacher = TextEditingController();
   @override
   void initState() { super.initState(); answers = List<int?>.from(widget.exam.answerKey); questionTypes = List<String>.from(widget.exam.questionTypes); variants = List<ExamVariant>.from(widget.exam.variants);
-    title.text = widget.exam.title; subject.text = widget.exam.subject; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
+    title.text = widget.exam.title; subject.text = widget.exam.subject; grade.text = widget.exam.grade; period.text = widget.exam.termName; school.text = widget.exam.schoolName; teacher.text = widget.exam.teacherName; }
 
   Future<void> _editExamDetails() async {
     final ok = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('تعديل بيانات الاختبار'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم الاختبار')),
         TextField(controller: subject, decoration: const InputDecoration(labelText: 'المادة')),
+        TextField(controller: grade, decoration: const InputDecoration(labelText: 'الصف')),
+        TextField(controller: period, decoration: const InputDecoration(labelText: 'الفترة أو نوع الاختبار')),
         TextField(controller: school, decoration: const InputDecoration(labelText: 'اسم المدرسة')),
         TextField(controller: teacher, decoration: const InputDecoration(labelText: 'اسم المعلم')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ'))],
     ));
-    if (ok == true) { await _save(allowIncomplete: true); if (mounted) setState(() {}); }
+    if (ok == true) { title.text = _composedTitle; await _save(allowIncomplete: true); if (mounted) setState(() {}); }
   }
   Future<void> _save({bool allowIncomplete = false}) async {
     if (!allowIncomplete && answers.any((v) => v == null)) return;
@@ -290,7 +297,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     // teacher's source key. The question/option permutations remain unchanged.
     variants = variants.map((variant) => variant.withAnswerKey(answers)).toList();
     final updated = Exam(
-      id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+      id: widget.exam.id, title: _composedTitle, subject: subject.text.trim(), grade: grade.text.trim(), termName: period.text.trim(),
       questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
       answerKey: List<int?>.from(answers), createdAt: widget.exam.createdAt,
       questionTypes: List<String>.from(questionTypes),
@@ -457,8 +464,10 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
       if (!mounted) return;
       final currentExam = Exam(
         id: widget.exam.id,
-        title: title.text.trim(),
+        title: _composedTitle,
         subject: subject.text.trim(),
+        grade: grade.text.trim(),
+        termName: period.text.trim(),
         questionCount: widget.exam.questionCount,
         optionCount: widget.exam.optionCount,
         answerKey: List<int?>.from(answers),
@@ -499,8 +508,10 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   Future<Uint8List> _createSheetPdf() async {
     final currentExam = Exam(
       id: widget.exam.id,
-      title: title.text.trim(),
+      title: _composedTitle,
       subject: subject.text.trim(),
+      grade: grade.text.trim(),
+      termName: period.text.trim(),
       questionCount: widget.exam.questionCount,
       optionCount: widget.exam.optionCount,
       answerKey: List<int?>.from(answers),
@@ -574,7 +585,7 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     appBar: AppBar(title: Text(title.text), actions: [IconButton(tooltip: 'تعديل بيانات الاختبار', onPressed: _editExamDetails, icon: const Icon(Icons.edit_note)), IconButton(tooltip: 'تصدير PDF', onPressed: _exportSheetPdf, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'معاينة ورقة الإجابة', onPressed: _showPdfPreview, icon: const Icon(Icons.preview)), IconButton(tooltip: 'طباعة ورقة الإجابة', onPressed: _printSheet, icon: const Icon(Icons.print))]),
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Text(subject.text + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
+        Text([subject.text, grade.text, period.text].where((v) => v.trim().isNotEmpty).join(' • ') + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
         const SizedBox(height: 6), const Text('هذا التطبيق يصمم أوراق الإجابة فقط: حدّد نوع كل فقرة ومفتاحها، ثم أنشئ النماذج ووزّع ورقة باسم كل طالب.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
           OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
