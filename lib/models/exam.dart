@@ -215,14 +215,14 @@ class ExamQuestion {
 }
 
 class Exam {
-  Exam({required this.id, required this.title, required this.subject, required this.questionCount, required this.optionCount, required this.answerKey, this.createdAt, List<String>? questionTypes, this.schoolName = '', this.teacherName = '', this.termName = '', List<ExamVariant>? variants, List<ExamQuestion>? questions})
+  Exam({required this.id, required this.title, required this.subject, required this.questionCount, required this.optionCount, required this.answerKey, this.createdAt, List<String>? questionTypes, this.schoolName = '', this.teacherName = '', this.termName = '', this.grade = '', List<ExamVariant>? variants, List<ExamQuestion>? questions})
       : questionTypes = questionTypes ?? List<String>.filled(questionCount, 'mcq'), variants = variants ?? [], questions = questions ?? [];
   final String id, title, subject;
   final int questionCount, optionCount;
   final List<int?> answerKey;
   final DateTime? createdAt;
   final List<String> questionTypes;
-  final String schoolName, teacherName, termName;
+  final String schoolName, teacherName, termName, grade;
   final List<ExamVariant> variants;
   final List<ExamQuestion> questions;
   int optionsFor(int index) => index < questionTypes.length && questionTypes[index] == 'tf' ? 2 : optionCount;
@@ -234,6 +234,7 @@ class Exam {
     String? schoolName,
     String? teacherName,
     String? termName,
+    String? grade,
     List<ExamVariant>? variants,
     List<ExamQuestion>? questions,
   }) => Exam(
@@ -248,6 +249,7 @@ class Exam {
     schoolName: schoolName ?? this.schoolName,
     teacherName: teacherName ?? this.teacherName,
     termName: termName ?? this.termName,
+    grade: grade ?? this.grade,
     variants: variants ?? this.variants,
     questions: questions ?? this.questions,
   );
@@ -255,7 +257,7 @@ class Exam {
   Map<String, dynamic> toJson() => {
     'id': id, 'title': title, 'subject': subject, 'questionCount': questionCount, 'optionCount': optionCount,
     'answerKey': answerKey, 'questionTypes': questionTypes, 'schoolName': schoolName, 'teacherName': teacherName,
-    'termName': termName, 'variants': variants.map((v) => v.toJson()).toList(),
+    'termName': termName, 'grade': grade, 'variants': variants.map((v) => v.toJson()).toList(),
     'questions': questions.map((q) => q.toJson()).toList(),
     'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
   };
@@ -268,7 +270,7 @@ class Exam {
       createdAt: DateTime.tryParse((json['createdAt'] ?? '') as String),
       questionTypes: (json['questionTypes'] as List?)?.map((v) => v.toString()).toList(),
       schoolName: (json['schoolName'] ?? '') as String, teacherName: (json['teacherName'] ?? '') as String,
-      termName: (json['termName'] ?? '') as String,
+      termName: (json['termName'] ?? '') as String, grade: (json['grade'] ?? '') as String,
       variants: (json['variants'] as List?)?.map((v) => ExamVariant.fromJson(Map<String, dynamic>.from(v as Map))).toList(),
       questions: (json['questions'] as List?)?.map((v) => ExamQuestion.fromJson(Map<String, dynamic>.from(v as Map))).toList(),
     );
