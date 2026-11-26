@@ -188,9 +188,19 @@ class OmrScannerService {
       }
       final ranked = List<int>.generate(scores.length, (i) => i)..sort((a, b) => scores[b].compareTo(scores[a]));
       final best = scores[ranked.first], second = ranked.length > 1 ? scores[ranked[1]] : 0.0;
-      if (best < 0.22) { displayedAnswers.add(null); blanks.add(OmrSheetService.visualQuestionNumber(layoutExam, q)); }
-      else if (best < 0.48 || best - second < 0.14) { displayedAnswers.add(null); ambiguous.add(OmrSheetService.visualQuestionNumber(layoutExam, q)); }
-      else { displayedAnswers.add(ranked.first); }
+      // Count distinct bubble centers that contain a meaningful dark fill.
+      // Any two marked options make the whole question invalid (zero points),
+      // even if one mark is darker than the other.
+      final markedOptions = scores.where((score) => score >= 0.22).length;
+      if (markedOptions == 0) {
+        displayedAnswers.add(null);
+        blanks.add(OmrSheetService.visualQuestionNumber(layoutExam, q));
+      } else if (markedOptions > 1 || best < 0.48 || best - second < 0.14) {
+        displayedAnswers.add(null);
+        ambiguous.add(OmrSheetService.visualQuestionNumber(layoutExam, q));
+      } else {
+        displayedAnswers.add(ranked.first);
+      }
     }
     final answers = variant == null ? displayedAnswers : variant.mapDisplayedAnswersToOriginal(displayedAnswers);
 
