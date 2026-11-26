@@ -116,7 +116,8 @@ class _LiveAutoScanScreenState extends State<LiveAutoScanScreen> {
   }
 
   List<_BubbleMark> _marks(OmrReadout r) {
-    final v = widget.exam.variants.where((x) => x.code == r.variantCode).firstOrNull;
+    final matches = widget.exam.variants.where((x) => x.code == r.variantCode).toList();
+    final v = matches.isEmpty ? null : matches.first;
     final layout = v == null ? widget.exam : Exam(
       id: widget.exam.id, title: widget.exam.title, subject: widget.exam.subject,
       questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
@@ -176,7 +177,7 @@ class _LiveAutoScanScreenState extends State<LiveAutoScanScreen> {
     return Column(children: [
       Expanded(child: Center(child: AspectRatio(aspectRatio: OmrSheetService.pageWidth / OmrSheetService.pageHeight,
         child: Stack(fit: StackFit.expand, children: [
-          Image.memory(r.warpedImageBytes, fit: BoxFit.fill),
+          Image.memory(r.warpedImageBytes!, fit: BoxFit.fill),
           CustomPaint(painter: _BubbleMarkPainter(_marks(r))),
         ]),
       ))),
