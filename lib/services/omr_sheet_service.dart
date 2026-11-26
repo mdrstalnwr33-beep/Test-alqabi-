@@ -143,7 +143,7 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('الصف: ${exam.grade.trim().isEmpty ? '____________________' : exam.grade.trim()}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('اسم الطالب: ${studentName.isEmpty ? '____________________' : studentName}', arabic, 10),
+        _rtl('اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}', bold, 15),
       ]),
     );
     // Student instructions are printed in a matching panel on the left.
