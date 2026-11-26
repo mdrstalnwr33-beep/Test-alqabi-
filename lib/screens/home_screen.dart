@@ -350,7 +350,8 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         optionCount: widget.exam.optionCount, answerKey: List<int?>.from(answers), count: count,
       );
       final updated = Exam(
-        id: widget.exam.id, title: title.text.trim(), subject: subject.text.trim(),
+        id: widget.exam.id, title: _composedTitle, subject: subject.text.trim(),
+        grade: grade.text.trim(), termName: period.text.trim(),
         questionCount: widget.exam.questionCount, optionCount: widget.exam.optionCount,
         answerKey: List<int?>.from(answers), createdAt: widget.exam.createdAt,
         questionTypes: List<String>.from(questionTypes),
