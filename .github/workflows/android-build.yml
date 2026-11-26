@@ -22,8 +22,65 @@ jobs:
         with:
           flutter-version: '3.38.10'
           cache: true
+      - name: Set a strictly increasing Android version code
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          p = Path("pubspec.yaml")
+          s = p.read_text()
+          version = f"0.1.0+{os.environ['BUILD_NUMBER']}"
+          s, count = re.subn(r"(?m)^version:.*$", f"version: {version}", s, count=1)
+          if count != 1:
+              raise SystemExit("Could not set the Android version code in pubspec.yaml")
+          p.write_text(s)
+          print(f"Build version set to {version}")
+          PY
       - name: Generate Android platform files
         run: flutter create --platforms=android --org com.alqadi --project-name alqadi_smart_exam_checker --no-pub .
+      - name: Configure permanent Android app signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing GitHub secret ANDROID_KEYSTORE_BASE64"; exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEYSTORE_PASSWORD"; exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing GitHub secret ANDROID_KEY_ALIAS"; exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEY_PASSWORD"; exit 1)
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          test -s android/app/upload-keystore.jks
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          if 'create("release")' not in s:
+              marker = "    buildTypes {"
+              if marker not in s:
+                  raise SystemExit("Could not find buildTypes block in generated Gradle file")
+              signing = """    signingConfigs {
+                  create("release") {
+                      keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                      storeFile = file("upload-keystore.jks")
+                      storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                  }
+              }
+
+          """
+              s = s.replace(marker, signing + marker, 1)
+          old = 'signingConfig = signingConfigs.getByName("debug")'
+          if old in s:
+              s = s.replace(old, 'signingConfig = signingConfigs.getByName("release")', 1)
+          elif 'signingConfig = signingConfigs.getByName("release")' not in s:
+              raise SystemExit("Could not safely set release signing config")
+          p.write_text(s)
+          print("Permanent release signing configured")
+          PY
       - name: Configure Android plugin repositories
         run: |
           python3 - <<'PY'
