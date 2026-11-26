@@ -265,8 +265,9 @@ class _ExamDetailScreen extends StatefulWidget {
 }
 class _ExamDetailScreenState extends State<_ExamDetailScreen> {
   String get _composedTitle {
+    if (grade.text.trim().isEmpty && period.text.trim().isEmpty) return title.text.trim();
     final parts = [subject.text.trim(), grade.text.trim(), period.text.trim()].where((part) => part.isNotEmpty).toList();
-    return parts.isEmpty ? title.text.trim() : parts.join(' ');
+    return parts.join(' ');
   }
   late List<int?> answers;
   late List<String> questionTypes;
