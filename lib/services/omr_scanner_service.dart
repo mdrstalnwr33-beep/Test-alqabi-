@@ -18,6 +18,8 @@ class OmrReadout {
     this.optionDisplayIndex = const [],
     this.questionOrder = const [],
     this.variantAnswerKey = const [],
+    this.warpedImageBytes,
+    this.displayedMarkedOptions = const [],
   });
   /// Answers are stored in the original exam/key order.
   final List<int?> answers;
