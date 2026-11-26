@@ -67,27 +67,34 @@ jobs:
       - name: Build universal release APK
         run: |
           flutter build apk --release
-          mkdir -p dist/apk
-          cp build/app/outputs/flutter-apk/app-release.apk dist/apk/app-universal-release.apk
+          mkdir -p dist/universal
+          cp build/app/outputs/flutter-apk/app-release.apk dist/universal/app-universal-release.apk
       - name: Build smaller ABI-specific APKs
         run: |
           flutter build apk --release --split-per-abi
-          cp build/app/outputs/flutter-apk/*-release.apk dist/apk/
+          mkdir -p dist/abi
+          cp build/app/outputs/flutter-apk/*-release.apk dist/abi/
       - name: Report APK sizes and largest packaged files
         run: |
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-          for apk in sorted(Path("dist/apk").glob("*.apk")):
+          for apk in sorted(Path("dist").rglob("*.apk")):
               print(f"\\nAPK: {apk.name} | {apk.stat().st_size / 1024 / 1024:.2f} MiB")
               with ZipFile(apk) as z:
                   largest = sorted(z.infolist(), key=lambda x: x.file_size, reverse=True)[:15]
                   for item in largest:
                       print(f"  {item.file_size / 1024 / 1024:8.2f} MiB  {item.filename}")
           PY
-      - name: Upload universal and ABI-specific APKs
+      - name: Upload universal APK only
         uses: actions/upload-artifact@v4
         with:
-          name: alqadi-smart-exam-checker-android-apks
-          path: dist/apk/*.apk
+          name: alqadi-smart-exam-checker-universal
+          path: dist/universal/*.apk
+          if-no-files-found: error
+      - name: Upload ABI-specific APKs separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: alqadi-smart-exam-checker-abi-apks
+          path: dist/abi/*.apk
           if-no-files-found: error
