@@ -349,31 +349,20 @@ class OmrScannerService {
     }
 
     try {
-      // Read the dedicated full-width row first. It is separate from the
-      // metadata header, so the OCR crop does not include school/exam text.
-      final rawNameCandidates = [
-        await recognize(
-          top: 365,
-          fileName: 'student_name_dedicated',
-          language: 'ara+eng',
-          isName: true,
-          left: 120,
-          width: 950,
-          height: 58,
-        ),
-        // Keep compatibility with sheets printed before the dedicated row.
-        await recognize(
-          top: 300,
-          fileName: 'student_name_legacy',
-          language: 'ara+eng',
-          isName: true,
-        ),
-      ];
-      final nameCandidates = rawNameCandidates
-          .map(cleanStudentName)
-          .where(isLikelyStudentName)
-          .toList();
-      final name = nameCandidates.isEmpty ? '' : nameCandidates.first;
+      // Read the current, full-width red student-name band only.
+      // Do not fall back to the old header location: it can contain unrelated
+      // printed metadata and caused names to be truncated or mixed with labels.
+      final rawName = await recognize(
+        top: 350,
+        fileName: 'student_name_current_band',
+        language: 'ara+eng',
+        isName: true,
+        left: 65,
+        width: 1060,
+        height: 90,
+      );
+      final cleanedName = cleanStudentName(rawName);
+      final name = isLikelyStudentName(cleanedName) ? cleanedName : '';
 
       final rawSeat = await recognize(
         top: 334, fileName: 'seat_number', language: 'ara+eng', isName: false,
