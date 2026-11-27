@@ -296,25 +296,24 @@ class OmrScannerService {
       required String language,
       bool isName = false,
     }) async {
-      // The name and seat fields are printed on separate lines in the right
-      // header panel. Use a slightly taller crop to retain Arabic letter dots
-      // and descenders after phone-camera resampling.
-      const left = 606, width = 528, height = 56;
+      // The student's name is the final, enlarged row in the right header.
+      // Keep the full line, including Arabic dots and descenders, in the OCR crop.
+      const left = 606, width = 528, height = 84;
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
       final gray = imglib.grayscale(crop);
-      imglib.contrast(gray, contrast: 175);
+      imglib.contrast(gray, contrast: 190);
       final enlarged = imglib.copyResize(
         gray,
-        width: width * 4,
-        height: height * 4,
+        width: width * 6,
+        height: height * 6,
         interpolation: imglib.Interpolation.cubic,
       );
       final binary = imglib.Image(width: enlarged.width, height: enlarged.height, numChannels: 3);
       for (var y = 0; y < enlarged.height; y++) {
         for (var x = 0; x < enlarged.width; x++) {
           final pixel = enlarged.getPixel(x, y);
-          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 175 ? 0 : 255;
+          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 165 ? 0 : 255;
           binary.setPixelRgb(x, y, value, value, value);
         }
       }
@@ -325,13 +324,14 @@ class OmrScannerService {
         final candidates = <String>[];
         for (final image in [enlarged, binary]) {
           await file.writeAsBytes(imglib.encodePng(image), flush: true);
-          for (final pageMode in ['7', '6']) {
+          for (final pageMode in ['7', '6', '11']) {
             final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
               language: language,
               engine: OCREngine.tesseract,
               options: {
                 'tessedit_pageseg_mode': pageMode,
                 'preserve_interword_spaces': '1',
+                if (isName) 'user_defined_dpi': '300',
               },
             ));
             candidates.add(raw.trim());
@@ -345,8 +345,12 @@ class OmrScannerService {
             final lettersB = RegExp(r'[\u0621-\u064A]').allMatches(cleanB).length;
             final wordsA = cleanA.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
             final wordsB = cleanB.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
-            final scoreA = lettersA + (wordsA >= 3 ? 20 : wordsA == 2 ? 8 : 0);
-            final scoreB = lettersB + (wordsB >= 3 ? 20 : wordsB == 2 ? 8 : 0);
+            final scoreA = lettersA +
+                (wordsA >= 3 && wordsA <= 5 ? 35 : wordsA == 2 ? 8 : 0) -
+                (wordsA > 6 ? 25 : 0);
+            final scoreB = lettersB +
+                (wordsB >= 3 && wordsB <= 5 ? 35 : wordsB == 2 ? 8 : 0) -
+                (wordsB > 6 ? 25 : 0);
             return scoreB.compareTo(scoreA);
           });
         } else {
@@ -363,7 +367,7 @@ class OmrScannerService {
       // Arabic-only recognition improves names; mixed Arabic/English remains
       // useful for seat numbers that may be printed with either digit style.
       final rawName = await recognize(
-        top: 302,
+        top: 300,
         fileName: 'student_name',
         language: 'ara',
         isName: true,
