@@ -56,26 +56,26 @@ class OmrScannerService {
   /// Removes the printed field caption from OCR output without deleting a
   /// legitimate word that happens to occur inside a student's name.
   static String cleanStudentName(String raw) {
-    var value = raw.replaceAll(RegExp(r'[\\r\\n]+'), ' ').trim();
+    var value = raw.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
     value = value.replaceFirst(
-      RegExp(r'^(?:(?:اسم\\s*(?:الطالب|التلميذ))|(?:student\\s*name)|(?:رقم\\s*الجلوس)|(?:الجلوس))\\s*[:：\\-]?\\s*', caseSensitive: false),
+      RegExp(r'^(?:(?:اسم\s*(?:الطالب|التلميذ))|(?:student\s*name)|(?:رقم\s*الجلوس)|(?:الجلوس))\s*[:：\-]?\s*', caseSensitive: false),
       '',
     );
     // Keep both Arabic and Latin letters. The previous Arabic-only filter
     // silently erased every English student name.
     return value
-        .replaceAll(RegExp(r'[^\\u0621-\\u064A\\u0660-\\u0669A-Za-z\\s\\-\']'), ' ')
-        .replaceAll(RegExp(r'\\s+'), ' ')
+        .replaceAll(RegExp(r"[^ء-ي٠-٩A-Za-z\s\-']"), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
 
   static bool isLikelyStudentName(String value) {
     final cleaned = cleanStudentName(value);
-    final letters = RegExp(r'[\\u0621-\\u064A A-Za-z]').allMatches(cleaned).length;
-    final words = cleaned.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).toList();
+    final letters = RegExp(r'[ء-يA-Za-z]').allMatches(cleaned).length;
+    final words = cleaned.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
     if (letters < 4 || words.length < 2 || words.length > 6) return false;
     if (words.any((word) => word.length < 2)) return false;
-    if (RegExp(r'(.)\\1\\1').hasMatch(cleaned)) return false;
+    if (RegExp(r'(.)\1\1').hasMatch(cleaned)) return false;
     final forbidden = RegExp(r'^(اسم|الطالب|التلميذ|رقم|الجلوس|student|name)$', caseSensitive: false);
     if (words.any(forbidden.hasMatch)) return false;
     return true;
@@ -363,7 +363,7 @@ class OmrScannerService {
           .replaceAll('٨', '8').replaceAll('٩', '9');
       return (
         isLikelyStudentName(name) ? name : '',
-        RegExp(r'\\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
+        RegExp(r'\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
       );
     } catch (_) {
       return ('', '');
