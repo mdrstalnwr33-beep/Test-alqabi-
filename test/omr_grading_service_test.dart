@@ -93,4 +93,34 @@ void main() {
       throwsStateError,
     );
   });
+
+  test('uses the printed true/false position, including legacy stale keys', () {
+    final variant = ExamVariant(
+      code: 'Q3958-001',
+      questionOrder: const [0, 1],
+      // Both questions deliberately swap the printed صح/خطأ positions.
+      optionOrder: const [[1, 0], [1, 0]],
+      // Simulate a result saved by an older release with an incorrect key.
+      displayedAnswerKey: const [0, 0],
+    );
+    final sourceKey = const <int?>[0, 1];
+    expect(variant.getAnswerKey(sourceKey), [1, 0]);
+
+    final optionDisplayIndex = const <List<int>>[
+      [1, 0],
+      [1, 0],
+    ];
+    final answers = variant.mapDisplayedAnswersToOriginal([1, 0]);
+    final summary = OmrGradingService.grade(
+      originalAnswers: answers,
+      questionOrder: variant.questionOrder,
+      optionDisplayIndex: optionDisplayIndex,
+      displayedAnswerKey: variant.getAnswerKey(sourceKey),
+      questionTypes: const ['tf', 'tf'],
+      optionCount: 4,
+    );
+    expect(summary.correct, 2);
+    expect(summary.incorrect, 0);
+    expect(summary.unanswered, 0);
+  });
 }

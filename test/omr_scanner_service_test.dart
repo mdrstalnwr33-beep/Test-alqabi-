@@ -5,6 +5,17 @@ import 'package:alqadi_smart_exam_checker/services/omr_scanner_service.dart';
 import 'package:alqadi_smart_exam_checker/services/omr_sheet_service.dart';
 
 void main() {
+  test('cleans only an OCR field caption from an Arabic student name', () {
+    expect(
+      OmrScannerService.cleanStudentName('اسم الطالب: عبد الطالب محمد'),
+      'عبد الطالب محمد',
+    );
+    expect(
+      OmrScannerService.cleanStudentName('رقم الجلوس: ٧٦'),
+      '',
+    );
+  });
+
   Exam makeExam() => Exam(
     id: 'scanner-test-123456',
     title: 'اختبار تجريبي',

@@ -53,6 +53,20 @@ class OmrScannerService {
   final Future<String> Function(imglib.Image)? _variantCodeReader;
   final Future<(String, String)> Function(imglib.Image)? _identityReader;
 
+  /// Removes the printed field caption from OCR output without deleting a
+  /// legitimate word that happens to occur inside a student's name.
+  static String cleanStudentName(String raw) {
+    var value = raw.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
+    value = value.replaceFirst(
+      RegExp(r'^(?:اسم\s*(?:الطالب|التلميذ)|رقم\s*الجلوس|الجلوس)\s*[:：\-]?\s*'),
+      '',
+    );
+    return value
+        .replaceAll(RegExp(r'[^\u0621-\u064A\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   static const outputWidth = 1190, outputHeight = 1684;
   Future<List<ScanPoint>> detectCorners(Uint8List imageBytes) async {
     final decoded = imglib.decodeImage(imageBytes);
@@ -276,12 +290,6 @@ class OmrScannerService {
   }
 
   Future<(String, String)> _readStudentIdentity(imglib.Image warped) async {
-    String cleanName(String raw) => raw
-        .replaceAll(RegExp(r'اسم\s*الطالب|اسم\s*التلميذ|الطالب|التلميذ|رقم\s*الجلوس|الجلوس|رقم'), ' ')
-        .replaceAll(RegExp(r'[^\u0621-\u064A\s]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-
     Future<String> recognize({
       required int top,
       required String fileName,
@@ -332,7 +340,7 @@ class OmrScannerService {
 
         if (isName) {
           candidates.sort((a, b) {
-            final cleanA = cleanName(a), cleanB = cleanName(b);
+            final cleanA = cleanStudentName(a), cleanB = cleanStudentName(b);
             final lettersA = RegExp(r'[\u0621-\u064A]').allMatches(cleanA).length;
             final lettersB = RegExp(r'[\u0621-\u064A]').allMatches(cleanB).length;
             final wordsA = cleanA.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
@@ -365,7 +373,7 @@ class OmrScannerService {
         fileName: 'seat_number',
         language: 'ara+eng',
       );
-      final name = cleanName(rawName);
+      final name = cleanStudentName(rawName);
       final arabicLetters = RegExp(r'[\u0621-\u064A]').allMatches(name).length;
       final normalizedDigits = rawSeat
           .replaceAll('٠', '0').replaceAll('١', '1')

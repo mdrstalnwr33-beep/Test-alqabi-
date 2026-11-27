@@ -38,10 +38,10 @@ class ExamVariant {
       List<int?>.generate(questionOrder.length, (q) => getDisplayedAnswer(q, originalAnswerKey));
 
   List<int?> getAnswerKey(List<int?> originalAnswerKey) =>
-      displayedAnswerKey.length == questionOrder.length &&
-              displayedAnswerKey.every((answer) => answer != null)
-          ? List<int?>.from(displayedAnswerKey)
-          : buildDisplayedAnswerKey(originalAnswerKey);
+      // This is derived data. Rebuild it from the source key and the stored
+      // permutation so variants saved by older releases cannot retain an
+      // incorrect true/false position after an upgrade.
+      buildDisplayedAnswerKey(originalAnswerKey);
 
   ExamVariant withAnswerKey(List<int?> originalAnswerKey) => ExamVariant(
     code: code,
