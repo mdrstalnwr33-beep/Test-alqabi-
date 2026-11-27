@@ -58,28 +58,28 @@ class OmrScannerService {
   static String cleanStudentName(String raw) {
     var value = raw.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
     value = value.replaceFirst(
-      RegExp(r'^(?:اسم\s*(?:الطالب|التلميذ)|رقم\s*الجلوس|الجلوس)\s*[:：\-]?\s*'),
+      RegExp(r'^(?:(?:اسم\s*(?:الطالب|التلميذ))|(?:student\s*name)|(?:رقم\s*الجلوس)|(?:الجلوس))\s*[:：\-]?\s*', caseSensitive: false),
       '',
     );
-    return value
-        .replaceAll(RegExp(r'[^\u0621-\u064A\s]'), ' ')
+    // Keep both Arabic and Latin letters. The previous Arabic-only filter
+    // silently erased every English student name.
+    value = value
+        .replaceAll(RegExp(r'[^ء-يA-Za-z\s]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+    // A seat-number field is not a student name.
+    if (!RegExp(r'[ء-يA-Za-z]').hasMatch(value)) return '';
+    return value;
   }
 
-  /// OCR can return Arabic-looking noise for handwriting or for text outside
-  /// the name row. Never expose that noise as a saved student name.
   static bool isLikelyStudentName(String value) {
     final cleaned = cleanStudentName(value);
-    final letters = RegExp(r'[\u0621-\u064A]').allMatches(cleaned).length;
-    final words = cleaned
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty)
-        .toList();
-    if (letters < 4 || words.isEmpty || words.length > 6) return false;
+    final letters = RegExp(r'[ء-يA-Za-z]').allMatches(cleaned).length;
+    final words = cleaned.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+    if (letters < 4 || words.length < 2 || words.length > 6) return false;
     if (words.any((word) => word.length < 2)) return false;
     if (RegExp(r'(.)\1\1').hasMatch(cleaned)) return false;
-    final forbidden = RegExp(r'^(اسم|الطالب|التلميذ|رقم|الجلوس)$');
+    final forbidden = RegExp(r'^(اسم|الطالب|التلميذ|رقم|الجلوس|student|name)$', caseSensitive: false);
     if (words.any(forbidden.hasMatch)) return false;
     return true;
   }
@@ -284,17 +284,21 @@ class OmrScannerService {
   Future<String> _readVariantCode(imglib.Image warped) async {
     const left = 48, top = 1620, width = 500, height = 52;
     if (warped.width < left + width || warped.height < top + height) return '';
-    final crop = imglib.copyCrop(warped, x: left, y: top, width: width, height: height);
-    final cleaned = imglib.grayscale(crop);
-    imglib.contrast(cleaned, contrast: 150);
-    final enlarged = imglib.copyResize(cleaned, width: width * 3, height: height * 3,
-      interpolation: imglib.Interpolation.cubic);
+    final crop = imglib.grayscale(imglib.copyCrop(
+      warped, x: left, y: top, width: width, height: height,
+    ));
+    imglib.contrast(crop, contrast: 145);
+    final enlarged = imglib.copyResize(
+      crop, width: width * 3, height: height * 3,
+      interpolation: imglib.Interpolation.linear,
+    );
     final dir = await Directory.systemTemp.createTemp('alqadi_variant_');
     final file = File('${dir.path}/variant_code.png');
     try {
       await file.writeAsBytes(imglib.encodePng(enlarged), flush: true);
       final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
-        language: 'eng', engine: OCREngine.tesseract,
+        language: 'eng',
+        engine: OCREngine.tesseract,
         options: {'tessedit_pageseg_mode': '7', 'tessedit_char_whitelist': 'QABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-:'},
       ));
       final normalized = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9-]'), '');
@@ -311,130 +315,77 @@ class OmrScannerService {
       required int top,
       required String fileName,
       required String language,
-      bool isName = false,
+      required bool isName,
       int left = 606,
       int width = 528,
-      int? cropHeight,
+      int height = 52,
     }) async {
-      // The student's name is the final row in the right header. Keep this
-      // crop tight: including the next row makes Tesseract combine unrelated
-      // marks and return convincing-looking but incorrect Arabic noise.
-      final height = cropHeight ?? (isName ? 58 : 52);
+      if (warped.width < left + width) return '';
       final safeTop = top.clamp(0, warped.height - height).toInt();
-      final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
-      final gray = imglib.grayscale(crop);
-      imglib.contrast(gray, contrast: 190);
+      final crop = imglib.grayscale(imglib.copyCrop(
+        warped, x: left, y: safeTop, width: width, height: height,
+      ));
+      imglib.contrast(crop, contrast: 145);
       final enlarged = imglib.copyResize(
-        gray,
-        width: width * 6,
-        height: height * 6,
-        interpolation: imglib.Interpolation.cubic,
+        crop, width: width * 3, height: height * 3,
+        interpolation: imglib.Interpolation.linear,
       );
-      final binary = imglib.Image(width: enlarged.width, height: enlarged.height, numChannels: 3);
-      for (var y = 0; y < enlarged.height; y++) {
-        for (var x = 0; x < enlarged.width; x++) {
-          final pixel = enlarged.getPixel(x, y);
-          final value = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b) < 165 ? 0 : 255;
-          binary.setPixelRgb(x, y, value, value, value);
-        }
-      }
-
       final dir = await Directory.systemTemp.createTemp('alqadi_identity_');
       final file = File('${dir.path}/$fileName.png');
       try {
-        final candidates = <String>[];
-        for (final image in [enlarged, binary]) {
-          await file.writeAsBytes(imglib.encodePng(image), flush: true);
-          for (final pageMode in ['7', '6', '11']) {
-            final raw = await TesseractOcr.extractText(file.path, config: OCRConfig(
-              language: language,
-              engine: OCREngine.tesseract,
-              options: {
-                'tessedit_pageseg_mode': pageMode,
-                'preserve_interword_spaces': '1',
-                if (isName) 'user_defined_dpi': '300',
-              },
-            ));
-            candidates.add(raw.trim());
-          }
-        }
-
-        if (isName) {
-          candidates.sort((a, b) {
-            final cleanA = cleanStudentName(a), cleanB = cleanStudentName(b);
-            final lettersA = RegExp(r'[\u0621-\u064A]').allMatches(cleanA).length;
-            final lettersB = RegExp(r'[\u0621-\u064A]').allMatches(cleanB).length;
-            final wordsA = cleanA.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
-            final wordsB = cleanB.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
-            final scoreA = lettersA +
-                (wordsA >= 3 && wordsA <= 5 ? 35 : wordsA == 2 ? 8 : 0) -
-                (wordsA > 6 ? 25 : 0);
-            final scoreB = lettersB +
-                (wordsB >= 3 && wordsB <= 5 ? 35 : wordsB == 2 ? 8 : 0) -
-                (wordsB > 6 ? 25 : 0);
-            return scoreB.compareTo(scoreA);
-          });
-          // Prefer a candidate that is structurally a real multi-word name.
-          // If none passes, return an empty value so the review screen asks
-          // the teacher instead of saving OCR garbage.
-          final valid = candidates
-              .map(cleanStudentName)
-              .where(isLikelyStudentName)
-              .toList();
-          return valid.isEmpty ? '' : valid.first;
-        } else {
-          candidates.sort((a, b) => RegExp(r'\d').allMatches(b).length
-              .compareTo(RegExp(r'\d').allMatches(a).length));
-        }
-        return candidates.isEmpty ? '' : candidates.first;
+        await file.writeAsBytes(imglib.encodePng(enlarged), flush: true);
+        return await TesseractOcr.extractText(file.path, config: OCRConfig(
+          language: language,
+          engine: OCREngine.tesseract,
+          options: {
+            'tessedit_pageseg_mode': '7',
+            'preserve_interword_spaces': '1',
+            'user_defined_dpi': '240',
+          },
+        ));
       } finally {
         if (await dir.exists()) await dir.delete(recursive: true);
       }
     }
 
     try {
-      // Arabic-only recognition improves names; mixed Arabic/English remains
-      // useful for seat numbers that may be printed with either digit style.
-      // Read the dedicated full-width row first. It is intentionally
-      // separate from the old header position, which often included the
-      // neighbouring school/exam text in phone photos.
-      final nameCandidates = [
+      // Read the dedicated full-width row first. It is separate from the
+      // metadata header, so the OCR crop does not include school/exam text.
+      final rawNameCandidates = [
         await recognize(
           top: 365,
           fileName: 'student_name_dedicated',
-          language: 'ara',
+          language: 'ara+eng',
           isName: true,
           left: 120,
           width: 950,
-          cropHeight: 58,
+          height: 58,
         ),
+        // Keep compatibility with sheets printed before the dedicated row.
         await recognize(
           top: 300,
           fileName: 'student_name_legacy',
-          language: 'ara',
+          language: 'ara+eng',
           isName: true,
         ),
       ];
-      final rawName = nameCandidates.firstWhere(
-        isLikelyStudentName,
-        orElse: () => '',
-      );
+      final nameCandidates = rawNameCandidates
+          .map(cleanStudentName)
+          .where(isLikelyStudentName)
+          .toList();
+      final name = nameCandidates.isEmpty ? '' : nameCandidates.first;
+
       final rawSeat = await recognize(
-        top: 334,
-        fileName: 'seat_number',
-        language: 'ara+eng',
+        top: 334, fileName: 'seat_number', language: 'ara+eng', isName: false,
       );
-      final name = cleanStudentName(rawName);
-      final arabicLetters = RegExp(r'[\u0621-\u064A]').allMatches(name).length;
       final normalizedDigits = rawSeat
           .replaceAll('٠', '0').replaceAll('١', '1')
           .replaceAll('٢', '2').replaceAll('٣', '3')
           .replaceAll('٤', '4').replaceAll('٥', '5')
           .replaceAll('٦', '6').replaceAll('٧', '7')
           .replaceAll('٨', '8').replaceAll('٩', '9');
-      // Never mistake a printed field label such as "رقم الجلوس" for a name.
       return (
-        arabicLetters >= 4 && isLikelyStudentName(name) ? name : '',
+        isLikelyStudentName(name) ? name : '',
         RegExp(r'\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
       );
     } catch (_) {

@@ -150,9 +150,13 @@ class OmrSheetService {
             border: pw.Border.all(color: PdfColor.fromInt(0xFF3975C6), width: 0.8),
             borderRadius: pw.BorderRadius.circular(3),
           ),
-          child: _rtl(
-            'اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}',
-            bold, 18, color: PdfColor.fromInt(0xFF8B0000),
+          child: pw.FittedBox(
+            fit: pw.BoxFit.scaleDown,
+            alignment: pw.Alignment.centerRight,
+            child: _rtl(
+              'اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}',
+              bold, 18, color: PdfColor.fromInt(0xFF1557B0),
+            ),
           ),
         ),
       ]),
