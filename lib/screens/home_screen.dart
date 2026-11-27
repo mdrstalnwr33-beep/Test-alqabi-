@@ -230,14 +230,74 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _deleteResult(ExamResult result) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف نتيجة الطالب'),
+        content: Text('هل تريد حذف نتيجة «${result.studentName}» من سجل النتائج؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => results.removeWhere((item) => item.id == result.id));
+    await store.saveResults(results);
+  }
+
+  Future<void> _clearAllResults() async {
+    if (results.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('مسح سجل النتائج بالكامل'),
+        content: Text('سيتم حذف جميع النتائج وعددها ${results.length} نهائياً من هذا الجهاز. لا يمكن التراجع عن هذه العملية. يُفضّل تصدير نسخة احتياطية أولاً.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('مسح جميع النتائج'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(results.clear);
+    await store.saveResults(results);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم مسح سجل النتائج. الاختبارات ومفاتيح الإجابة لم تتأثر.')),
+      );
+    }
+  }
+
   Widget _resultsPage() {
     if (results.isEmpty) return const Center(child: Text('لا توجد نتائج بعد. صحّح أول ورقة لتظهر النتائج هنا.'));
     return ListView(padding: const EdgeInsets.all(16), children: [
-      Row(children: [const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))), IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)), IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); final dir = await getTemporaryDirectory(); final file = File('${dir.path}/alqadi-results.csv'); await file.writeAsBytes(bytes, flush: true); await Share.shareXFiles([XFile(file.path)], text: 'نتائج اختبارات القاضي الذكي'); }, icon: const Icon(Icons.table_view))]),
-      ...results.map((r) => Card(child: ListTile(leading: CircleAvatar(child: Text(r.isAbsent ? 'غائب' : r.percentage.toStringAsFixed(0))), title: Text(r.studentName), subtitle: Text((r.isAbsent ? 'غائب • ' : '') + (r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + (r.isAbsent ? 'لم يظلل أي فقرة' : r.correct.toString() + '/' + r.total.toString()) + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)), trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(r.isAbsent ? 'غائب' : r.incorrect.toString() + ' خطأ'),
-        IconButton(tooltip: 'مشاركة بطاقة النتيجة PDF', onPressed: () => _shareStudentCard(r), icon: const Icon(Icons.share_outlined)),
-      ]), onTap: () => _showResultDetails(r)))),
+      Row(children: [
+        const Expanded(child: Text('سجل النتائج', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
+        IconButton(tooltip: 'مسح جميع النتائج', color: Colors.red, onPressed: _clearAllResults, icon: const Icon(Icons.delete_sweep_outlined)),
+        IconButton(tooltip: 'تصدير PDF', onPressed: () async { final bytes = await reports.resultsPdf(results, 'All exams'); await Printing.sharePdf(bytes: bytes, filename: 'alqadi-results.pdf'); }, icon: const Icon(Icons.picture_as_pdf)),
+        IconButton(tooltip: 'تصدير CSV لبرنامج Excel', onPressed: () async { final bytes = reports.resultsCsv(results); final dir = await getTemporaryDirectory(); final file = File('${dir.path}/alqadi-results.csv'); await file.writeAsBytes(bytes, flush: true); await Share.shareXFiles([XFile(file.path)], text: 'نتائج اختبارات القاضي الذكي'); }, icon: const Icon(Icons.table_view)),
+      ]),
+      ...results.map((r) => Card(child: ListTile(
+        leading: CircleAvatar(child: Text(r.isAbsent ? 'غائب' : r.percentage.toStringAsFixed(0))),
+        title: Text(r.studentName),
+        subtitle: Text((r.isAbsent ? 'غائب • ' : '') + (r.seatNumber.isEmpty ? '' : 'رقم الجلوس: ' + r.seatNumber + ' • ') + r.examTitle + ' • ' + (r.isAbsent ? 'لم يظلل أي فقرة' : r.correct.toString() + '/' + r.total.toString()) + ' • ' + r.scannedAt.toLocal().toString().substring(0, 16) + ' • النموذج: ' + (r.variantCode.isEmpty ? 'BASE' : r.variantCode)),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(r.isAbsent ? 'غائب' : r.incorrect.toString() + ' خطأ'),
+          IconButton(tooltip: 'مشاركة بطاقة النتيجة PDF', onPressed: () => _shareStudentCard(r), icon: const Icon(Icons.share_outlined)),
+          IconButton(tooltip: 'حذف هذه النتيجة', color: Colors.red, onPressed: () => _deleteResult(r), icon: const Icon(Icons.delete_outline)),
+        ]),
+        onTap: () => _showResultDetails(r),
+      ))),
     ]);
   }
   Widget _settingsPage() => ListView(padding: const EdgeInsets.all(18), children: [
