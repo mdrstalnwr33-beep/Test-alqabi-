@@ -63,10 +63,13 @@ class OmrScannerService {
     );
     // Keep both Arabic and Latin letters. The previous Arabic-only filter
     // silently erased every English student name.
-    return value
+    value = value
         .replaceAll(RegExp(r'[^ء-يA-Za-z\s]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+    // A seat-number field is not a student name.
+    if (!RegExp(r'[ء-يA-Za-z]').hasMatch(value)) return '';
+    return value;
   }
 
   static bool isLikelyStudentName(String value) {
