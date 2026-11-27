@@ -152,7 +152,7 @@ class OmrSheetService {
           ),
           child: _rtl(
             'اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}',
-            bold, 15, color: PdfColor.fromInt(0xFF1557B0),
+            bold, 18, color: PdfColor.fromInt(0xFF8B0000),
           ),
         ),
       ]),

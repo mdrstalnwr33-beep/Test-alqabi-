@@ -105,7 +105,12 @@ class ExamPaperService {
             textDirection: pw.TextDirection.rtl,
             child: pw.Text(
               ArabicReshaper.instance.reshape('اسم الطالب: ${studentName.isEmpty ? '________________' : studentName}'),
-              style: pw.TextStyle(font: font, fontSize: 10),
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 15,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF8B0000),
+              ),
             ),
           ),
         ]),
