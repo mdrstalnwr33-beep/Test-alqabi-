@@ -16,6 +16,12 @@ void main() {
     );
   });
 
+  test('rejects Arabic-looking OCR noise as a student name', () {
+    expect(OmrScannerService.isLikelyStudentName('ا ب ت ث'), isFalse);
+    expect(OmrScannerService.isLikelyStudentName('اسم الطالب'), isFalse);
+    expect(OmrScannerService.isLikelyStudentName('محمد أحمد علي'), isTrue);
+  });
+
   Exam makeExam() => Exam(
     id: 'scanner-test-123456',
     title: 'اختبار تجريبي',

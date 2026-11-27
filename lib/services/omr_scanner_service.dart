@@ -67,6 +67,23 @@ class OmrScannerService {
         .trim();
   }
 
+  /// OCR can return Arabic-looking noise for handwriting or for text outside
+  /// the name row. Never expose that noise as a saved student name.
+  static bool isLikelyStudentName(String value) {
+    final cleaned = cleanStudentName(value);
+    final letters = RegExp(r'[\u0621-\u064A]').allMatches(cleaned).length;
+    final words = cleaned
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    if (letters < 4 || words.isEmpty || words.length > 6) return false;
+    if (words.any((word) => word.length < 2)) return false;
+    if (RegExp(r'(.)\1\1').hasMatch(cleaned)) return false;
+    final forbidden = RegExp(r'^(اسم|الطالب|التلميذ|رقم|الجلوس)$');
+    if (words.any(forbidden.hasMatch)) return false;
+    return true;
+  }
+
   static const outputWidth = 1190, outputHeight = 1684;
   Future<List<ScanPoint>> detectCorners(Uint8List imageBytes) async {
     final decoded = imglib.decodeImage(imageBytes);
@@ -296,9 +313,11 @@ class OmrScannerService {
       required String language,
       bool isName = false,
     }) async {
-      // The student's name is the final, enlarged row in the right header.
-      // Keep the full line, including Arabic dots and descenders, in the OCR crop.
-      const left = 606, width = 528, height = 84;
+      // The student's name is the final row in the right header. Keep this
+      // crop tight: including the next row makes Tesseract combine unrelated
+      // marks and return convincing-looking but incorrect Arabic noise.
+      const left = 606, width = 528;
+      final height = isName ? 58 : 52;
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
       final gray = imglib.grayscale(crop);
@@ -353,6 +372,14 @@ class OmrScannerService {
                 (wordsB > 6 ? 25 : 0);
             return scoreB.compareTo(scoreA);
           });
+          // Prefer a candidate that is structurally a real multi-word name.
+          // If none passes, return an empty value so the review screen asks
+          // the teacher instead of saving OCR garbage.
+          final valid = candidates
+              .map(cleanStudentName)
+              .where(isLikelyStudentName)
+              .toList();
+          return valid.isEmpty ? '' : valid.first;
         } else {
           candidates.sort((a, b) => RegExp(r'\d').allMatches(b).length
               .compareTo(RegExp(r'\d').allMatches(a).length));
@@ -387,7 +414,7 @@ class OmrScannerService {
           .replaceAll('٨', '8').replaceAll('٩', '9');
       // Never mistake a printed field label such as "رقم الجلوس" for a name.
       return (
-        arabicLetters >= 4 ? name : '',
+        arabicLetters >= 4 && isLikelyStudentName(name) ? name : '',
         RegExp(r'\d+').firstMatch(normalizedDigits)?.group(0) ?? '',
       );
     } catch (_) {
