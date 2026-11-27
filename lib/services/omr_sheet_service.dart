@@ -143,22 +143,6 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('الصف: ${exam.grade.trim().isEmpty ? '____________________' : exam.grade.trim()}', arabic, 10),
         pw.SizedBox(height: 4),
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-          decoration: pw.BoxDecoration(
-            color: PdfColor.fromInt(0xFFEAF2FF),
-            border: pw.Border.all(color: PdfColor.fromInt(0xFF3975C6), width: 0.8),
-            borderRadius: pw.BorderRadius.circular(3),
-          ),
-          child: pw.FittedBox(
-            fit: pw.BoxFit.scaleDown,
-            alignment: pw.Alignment.centerRight,
-            child: _rtl(
-              'اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}',
-              bold, 18, color: PdfColor.fromInt(0xFF1557B0),
-            ),
-          ),
-        ),
       ]),
     );
     // Student instructions are printed in a matching panel on the left.
@@ -197,10 +181,10 @@ class OmrSheetService {
       // A dedicated, full-width name row gives handwriting and OCR a clean
       // region that is separate from the school/exam metadata above.
       pw.Positioned(
-        left: 28, right: 28, top: 181,
+        left: 28, right: 28, top: 178,
         child: pw.Container(
-          height: 28,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          height: 33,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           alignment: pw.Alignment.center,
           decoration: pw.BoxDecoration(
             color: PdfColor.fromInt(0xFFFFF1F1),
@@ -209,7 +193,7 @@ class OmrSheetService {
           ),
           child: _rtl(
             'اسم الطالب: ${studentName.isEmpty ? '________________________________________________' : studentName}',
-            bold, 18, color: PdfColor.fromInt(0xFF8B0000),
+            bold, 21, color: PdfColor.fromInt(0xFF8B0000),
           ),
         ),
       ),
