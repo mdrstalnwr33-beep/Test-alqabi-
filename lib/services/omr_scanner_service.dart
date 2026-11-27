@@ -312,12 +312,14 @@ class OmrScannerService {
       required String fileName,
       required String language,
       bool isName = false,
+      int left = 606,
+      int width = 528,
+      int? cropHeight,
     }) async {
       // The student's name is the final row in the right header. Keep this
       // crop tight: including the next row makes Tesseract combine unrelated
       // marks and return convincing-looking but incorrect Arabic noise.
-      const left = 606, width = 528;
-      final height = isName ? 58 : 52;
+      final height = cropHeight ?? (isName ? 58 : 52);
       final safeTop = top.clamp(0, warped.height - height).toInt();
       final crop = imglib.copyCrop(warped, x: left, y: safeTop, width: width, height: height);
       final gray = imglib.grayscale(crop);
@@ -393,11 +395,29 @@ class OmrScannerService {
     try {
       // Arabic-only recognition improves names; mixed Arabic/English remains
       // useful for seat numbers that may be printed with either digit style.
-      final rawName = await recognize(
-        top: 300,
-        fileName: 'student_name',
-        language: 'ara',
-        isName: true,
+      // Read the dedicated full-width row first. It is intentionally
+      // separate from the old header position, which often included the
+      // neighbouring school/exam text in phone photos.
+      final nameCandidates = [
+        await recognize(
+          top: 365,
+          fileName: 'student_name_dedicated',
+          language: 'ara',
+          isName: true,
+          left: 120,
+          width: 950,
+          cropHeight: 58,
+        ),
+        await recognize(
+          top: 300,
+          fileName: 'student_name_legacy',
+          language: 'ara',
+          isName: true,
+        ),
+      ];
+      final rawName = nameCandidates.firstWhere(
+        isLikelyStudentName,
+        orElse: () => '',
       );
       final rawSeat = await recognize(
         top: 334,

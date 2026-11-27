@@ -190,6 +190,25 @@ class OmrSheetService {
         'حل فقرات الاختيار من متعدد', false, arabic)),
       pw.Positioned(left: 315, top: 214, child: _sectionLegend(
         'حل فقرات الصح والخطأ', true, arabic)),
+      // A dedicated, full-width name row gives handwriting and OCR a clean
+      // region that is separate from the school/exam metadata above.
+      pw.Positioned(
+        left: 28, right: 28, top: 181,
+        child: pw.Container(
+          height: 28,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          alignment: pw.Alignment.center,
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFFFF1F1),
+            border: pw.Border.all(color: PdfColor.fromInt(0xFF8B0000), width: 1.1),
+            borderRadius: pw.BorderRadius.circular(4),
+          ),
+          child: _rtl(
+            'اسم الطالب: ${studentName.isEmpty ? '________________________________________________' : studentName}',
+            bold, 18, color: PdfColor.fromInt(0xFF8B0000),
+          ),
+        ),
+      ),
       // Fixed calibration markers: same four page-corner positions as the printed reference form.
       _marker(15, 17), _marker(566, 17), _marker(566, 796), _marker(15, 796),
       ..._questionWidgets(layoutExam, arabic, variant: variant),
