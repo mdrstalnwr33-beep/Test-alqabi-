@@ -22,6 +22,13 @@ void main() {
     expect(OmrScannerService.isLikelyStudentName('محمد أحمد علي'), isTrue);
   });
 
+  test('keeps and accepts English student names as well as Arabic names', () {
+    expect(OmrScannerService.cleanStudentName('John Smith'), 'John Smith');
+    expect(OmrScannerService.isLikelyStudentName('John Smith'), isTrue);
+    expect(OmrScannerService.cleanStudentName('اسم الطالب: محمد أحمد علي'), 'محمد أحمد علي');
+    expect(OmrScannerService.isLikelyStudentName('محمد أحمد علي'), isTrue);
+  });
+
   Exam makeExam() => Exam(
     id: 'scanner-test-123456',
     title: 'اختبار تجريبي',
