@@ -143,7 +143,18 @@ class OmrSheetService {
         pw.SizedBox(height: 4),
         _rtl('الصف: ${exam.grade.trim().isEmpty ? '____________________' : exam.grade.trim()}', arabic, 10),
         pw.SizedBox(height: 4),
-        _rtl('اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}', bold, 15),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFEAF2FF),
+            border: pw.Border.all(color: PdfColor.fromInt(0xFF3975C6), width: 0.8),
+            borderRadius: pw.BorderRadius.circular(3),
+          ),
+          child: _rtl(
+            'اسم الطالب: ${studentName.isEmpty ? '________________________________' : studentName}',
+            bold, 15, color: PdfColor.fromInt(0xFF1557B0),
+          ),
+        ),
       ]),
     );
     // Student instructions are printed in a matching panel on the left.
@@ -214,10 +225,10 @@ class OmrSheetService {
     (match) => '٠١٢٣٤٥٦٧٨٩'[int.parse(match.group(0)!)],
   );
 
-  static pw.Widget _rtl(String text, pw.Font font, double size) => pw.Directionality(
+  static pw.Widget _rtl(String text, pw.Font font, double size, {PdfColor? color}) => pw.Directionality(
     textDirection: pw.TextDirection.rtl,
     child: pw.Text(ArabicReshaper.instance.reshape(text), textAlign: pw.TextAlign.right,
-      style: pw.TextStyle(font: font, fontSize: size)),
+      style: pw.TextStyle(font: font, fontSize: size, color: color)),
   );
 
   static pw.Widget _sectionLegend(String title, bool isTf, pw.Font font) =>
