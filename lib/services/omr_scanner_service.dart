@@ -64,7 +64,7 @@ class OmrScannerService {
     // Keep both Arabic and Latin letters. The previous Arabic-only filter
     // silently erased every English student name.
     return value
-        .replaceAll(RegExp(r"[^ء-ي٠-٩A-Za-z\s\-']"), ' ')
+        .replaceAll(RegExp(r'[^ء-يA-Za-z\s]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
