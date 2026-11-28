@@ -1,0 +1,165 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - feature/flutter-omr-app
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.10'
+          cache: true
+      - name: Set a strictly increasing Android version code
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          p = Path("pubspec.yaml")
+          s = p.read_text()
+          version = f"0.1.0+{os.environ['BUILD_NUMBER']}"
+          s, count = re.subn(r"(?m)^version:.*$", f"version: {version}", s, count=1)
+          if count != 1:
+              raise SystemExit("Could not set the Android version code in pubspec.yaml")
+          p.write_text(s)
+          print(f"Build version set to {version}")
+          PY
+      - name: Generate Android platform files
+        run: flutter create --platforms=android --org com.alqadi --project-name alqadi_smart_exam_checker --no-pub .
+      - name: Configure permanent Android app signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing GitHub secret ANDROID_KEYSTORE_BASE64"; exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEYSTORE_PASSWORD"; exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing GitHub secret ANDROID_KEY_ALIAS"; exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEY_PASSWORD"; exit 1)
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          test -s android/app/upload-keystore.jks
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          if 'create("release")' not in s:
+              marker = "    buildTypes {"
+              if marker not in s:
+                  raise SystemExit("Could not find buildTypes block in generated Gradle file")
+              signing = """    signingConfigs {
+                  create("release") {
+                      keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                      storeFile = file("upload-keystore.jks")
+                      storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                  }
+              }
+
+          """
+              s = s.replace(marker, signing + marker, 1)
+          old = 'signingConfig = signingConfigs.getByName("debug")'
+          if old in s:
+              s = s.replace(old, 'signingConfig = signingConfigs.getByName("release")', 1)
+          elif 'signingConfig = signingConfigs.getByName("release")' not in s:
+              raise SystemExit("Could not safely set release signing config")
+          p.write_text(s)
+          print("Permanent release signing configured")
+          PY
+      - name: Configure Android plugin repositories
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/settings.gradle.kts")
+          s = p.read_text()
+          start = s.find("pluginManagement {")
+          end = s.find("plugins {", start)
+          block = s[start:end if end >= 0 else len(s)]
+          additions = []
+          if "google()" not in block:
+              additions.append("        google()")
+          if "mavenCentral()" not in block:
+              additions.append("        mavenCentral()")
+          if additions:
+              insertion = "repositories {" + chr(10) + chr(10).join(additions)
+              s = s.replace("repositories {", insertion, 1)
+          p.write_text(s)
+          print(p.read_text())
+          PY
+      - name: Download Arabic PDF font
+        run: |
+          mkdir -p assets/fonts
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf -o assets/fonts/Amiri-Regular.ttf
+          curl -fL --retry 3 https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/OFL.txt -o assets/fonts/OFL-Amiri.txt
+          test -s assets/fonts/Amiri-Regular.ttf
+      - name: Download offline OCR language models
+        run: |
+          mkdir -p assets/tessdata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/ara.traineddata -o assets/tessdata/ara.traineddata
+          curl -fL --retry 3 https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata -o assets/tessdata/eng.traineddata
+          test -s assets/tessdata/ara.traineddata
+          test -s assets/tessdata/eng.traineddata
+          printf '{"files":["ara.traineddata","eng.traineddata"]}' > assets/tessdata_config.json
+      - name: Resolve packages
+        run: flutter pub get
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run tests
+        run: flutter test
+      - name: Build universal release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build apk --release
+          mkdir -p dist/universal
+          cp build/app/outputs/flutter-apk/app-release.apk dist/universal/app-universal-release.apk
+      - name: Build smaller ABI-specific APKs
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build apk --release --split-per-abi
+          mkdir -p dist/abi
+          cp build/app/outputs/flutter-apk/*-release.apk dist/abi/
+      - name: Report APK sizes and largest packaged files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          for apk in sorted(Path("dist").rglob("*.apk")):
+              print(f"\\nAPK: {apk.name} | {apk.stat().st_size / 1024 / 1024:.2f} MiB")
+              with ZipFile(apk) as z:
+                  largest = sorted(z.infolist(), key=lambda x: x.file_size, reverse=True)[:15]
+                  for item in largest:
+                      print(f"  {item.file_size / 1024 / 1024:8.2f} MiB  {item.filename}")
+          PY
+      - name: Upload universal APK only
+        uses: actions/upload-artifact@v4
+        with:
+          name: alqadi-smart-exam-checker-universal
+          path: dist/universal/*.apk
+          if-no-files-found: error
+      - name: Upload ABI-specific APKs separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: alqadi-smart-exam-checker-abi-apks
+          path: dist/abi/*.apk
+          if-no-files-found: error
