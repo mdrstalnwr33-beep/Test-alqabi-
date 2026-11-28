@@ -669,7 +669,6 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
     body: Column(children: [
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         Text([subject.text, grade.text, period.text].where((v) => v.trim().isNotEmpty).join(' • ') + ' • ' + widget.exam.questionCount.toString() + ' سؤال • اختيار: ' + questionTypes.where((t) => t == 'mcq').length.toString() + ' • صح/خطأ: ' + questionTypes.where((t) => t == 'tf').length.toString()),
-        const SizedBox(height: 6), const Text('هذا التطبيق يصمم أوراق الإجابة فقط: حدّد نوع كل فقرة ومفتاحها، ثم أنشئ النماذج ووزّع ورقة باسم كل طالب.', style: TextStyle(color: Colors.black54)),
         const SizedBox(height: 8), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
           OutlinedButton.icon(onPressed: _showPdfPreview, icon: const Icon(Icons.preview), label: const Text('معاينة PDF')),
           OutlinedButton.icon(onPressed: _exportSheetPdf, icon: const Icon(Icons.download), label: const Text('تصدير PDF')),
@@ -688,9 +687,9 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
         child: ListView.builder(
           itemCount: answers.length,
           itemBuilder: (context, i) => Card(
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -734,7 +733,9 @@ class _ExamDetailScreenState extends State<_ExamDetailScreen> {
                         ),
                         selected: answers[i] == j,
                         onSelected: (_) => setState(() => answers[i] = j),
-                        avatar: answers[i] == j ? const Icon(Icons.check, size: 16) : null,
+                        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        avatar: answers[i] == j ? const Icon(Icons.check, size: 18) : null,
                       ),
                     ),
                   ),
